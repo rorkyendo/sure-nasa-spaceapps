@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 
 :root{--bg:#06080f;--line:#1f2b4a;--tx:#e8edf8;--mut:#8996b6;--cy:#35e0ee;--g:#2fe48a;--y:#ffd23f;--r:#ff4d5e;--bl:#5aa8ff}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -13,8 +17,8 @@ radial-gradient(1px 1px at 61px 233px,#fff6,transparent);background-size:auto,au
 body{display:flex;flex-direction:column;align-items:center}
 .main{width:100%}
 .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-14px -16px 14px;padding:10px 16px;position:sticky;top:0;z-index:60;background:rgba(6,8,15,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.logo{width:44px;height:44px;border-radius:13px;background:linear-gradient(140deg,#1b2d52,#0b1226);border:1px solid #2a3f6e;display:grid;place-items:center}
-.logo svg{width:34px;height:34px}
+.logo{width:44px;height:44px;border-radius:50%;background:#06080f;border:1px solid #2a3f6e;display:grid;place-items:center;overflow:hidden}
+.logo svg,.logo img{width:44px;height:44px}
 .top h1{font-size:18px;font-weight:650;letter-spacing:.2px}
 .top .sub{color:var(--mut);font-size:12px}
 .sp{flex:1}
@@ -64,6 +68,8 @@ select:focus{outline:1px solid var(--cy)}
 .scale{position:absolute;left:12px;bottom:10px;z-index:6;font-family:"SF Mono",ui-monospace,monospace;font-size:10px;color:#bcd0f0;display:flex;flex-direction:column;gap:2px}
 .scale i{display:block;height:6px;border:1.5px solid #bcd0f0;border-top:0}
 .credit{position:absolute;right:10px;bottom:8px;z-index:6;font-size:10px;color:#7084ac;max-width:55%;text-align:right}
+.credit a{color:#8fa8d8;text-decoration:none;border-bottom:1px dotted #4a5d88}
+.credit a:hover{color:var(--cy)}
 .tip{position:absolute;pointer-events:none;background:#0a0f1f;border:1px solid var(--cy);color:var(--tx);padding:6px 9px;border-radius:8px;font-size:11.5px;z-index:8;display:none;white-space:nowrap}
 .rainov{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;background-image:repeating-linear-gradient(105deg,rgba(150,200,255,.55) 0 1.2px,transparent 1.2px 15px);z-index:3}
 .hint2{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:6;background:rgba(8,14,30,.85);border:1px solid #2a3f6e;border-radius:999px;padding:5px 14px;font-size:11.5px;color:#bcd0f0;pointer-events:none;white-space:nowrap}
@@ -226,3 +232,21 @@ input[type=text]:focus{outline:1px solid var(--cy)}
 
 input[type=password]{background:#0f1730;color:var(--tx);border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-family:inherit;font-size:12.5px}
 input[type=password]:focus{outline:1px solid var(--cy)}
+
+/* ---- smooth layer (React port) ---- */
+.btn{transition:border-color .18s ease,background .18s ease,transform .12s ease}
+.btn:active{transform:scale(.97)}
+.qc,.tmc,.li,.pl{transition:border-color .18s ease,background .18s ease}
+.card{transition:border-color .25s ease,box-shadow .25s ease}
+.card:hover{border-color:#2a3f6e;box-shadow:0 8px 28px rgba(0,0,0,.28)}
+.modal{transition:opacity .22s ease}
+.modal .mbox{transform:translateY(10px) scale(.985);opacity:0;transition:transform .26s cubic-bezier(.2,.8,.25,1),opacity .22s ease}
+.modal.on .mbox{transform:none;opacity:1}
+.main{animation:pagein .45s cubic-bezier(.2,.8,.25,1)}
+@keyframes pagein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.rin .card,.col>.card{animation:cardin .5s cubic-bezier(.2,.8,.25,1) backwards}
+.col>.card:nth-child(2){animation-delay:.07s}
+.rin .card:nth-child(2){animation-delay:.07s}
+@keyframes cardin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+select,input[type=text],input[type=password]{transition:border-color .18s ease,box-shadow .18s ease}
+@media(prefers-reduced-motion:reduce){.main,.card,.modal .mbox{animation:none;transition:none}}

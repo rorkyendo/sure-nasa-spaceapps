@@ -1,62 +1,58 @@
 # SURE — Spaceport Supply Route Readiness
 
-**NASA Space Apps Challenge 2026 · Jakarta · Team "Dancing with the SARs"**
+NASA Space Apps Challenge 2026 · Team **Dancing with the SARs** (Jakarta)
 
-Plan heavy cargo deliveries to spaceports. SURE colours each 1 km road segment by what radar sees (ponding water, sinking ground), scores every route by travel time, checks the rain ahead, and compares land, sea and air legs using documented NASA transport craft.
+Plan heavy-cargo deliveries to spaceports. Pick a cargo, drag the pickup truck
+anywhere on land, and compare route alternatives — scored by simulated NISAR
+radar indicators (surface change, subsidence, coherence) plus a live rain
+outlook. Local trips compare road options; long-distance pickups compare
+**Land / Sea / Air** transport modes against documented NASA cargo vehicles.
 
-**Live site:** https://rorkyendo.github.io/sure-nasa-spaceapps/
+**Live:** https://rorkyendo.github.io/sure-nasa-spaceapps/
 
-## What it does
+## Stack
 
-- Pick a spaceport (Cape Canaveral preset, Biak sample) and drag the truck anywhere on land — or type a city — to set the pickup point.
-- Land routes: up to 5 alternatives on a procedural road network, split into 1 km segments, each scored with radar KPIs (K1 backscatter change, K2 subsidence when GUNW exists, K4 segment status) plus rain penalty (K8).
-- Readiness KPIs: K5 readiness %, K7 weakest-point status, per route, per selected day.
-- Rain look-ahead: daily 8-day forecast (**live from Open-Meteo**; simulated fallback when unreachable) and a 60-month seasonal outlook (simulated climatology).
-- Long-distance pickups switch to transport modes: **Land / Sea / Air** with documented NASA craft — Super Guppy, An-124, Pegasus barge, R/S RocketShip — terminal feasibility (≤500 km), K9 sea/air weather status, weather-blocked warnings, and a cheapest-first recommendation (Sea → Land → Air).
-- Save analyses to History; share them with the team through the repo file `data/db/analyses.json` (see below).
+- **React 18 + TypeScript + Vite + Tailwind CSS**
+- `src/engine/engine.js` — the domain engine (ported from the original mockup):
+  Web-Mercator projection, Esri World Imagery tiles, procedural road network
+  anchored to real Natural Earth coastline data, Dijkstra route alternatives,
+  deterministic SAR-indicator simulation, multi-modal routing, scoring.
+  It renders the canvas/SVG map imperatively and fills panel containers by id.
+- `src/App.tsx` — React shell (top bar, cards, modals) that mounts the engine.
+- `src/lib/db.js` — GitHub-as-database (Contents API → `data/db/analyses.json`),
+  falls back to localStorage; plus the Meteomatics login store.
+- `public/` — static assets (mission patch `assets/patch.svg`, favicon,
+  `data/db/analyses.json` snapshot served as the read-side of the store).
 
-## Database — GitHub as a tiny NoSQL store
+## Data — what is real, what is simulated
 
-There is no server. History lives in `data/db/analyses.json` in this repo:
+| Layer | Source |
+|---|---|
+| Basemap | **Real** — Esri World Imagery satellite tiles |
+| Daily rain forecast (K8) | **Live** — Open-Meteo (no key); simulated fallback |
+| Rain radar overlay | **Live when configured** — Meteomatics WMS `precip_1h`. Paste `user:password` in the **DB** dialog; it stays in your browser. (Note: Meteomatics currently does not send `Access-Control-Allow-Origin`, so browsers may block it — a proxy is needed for reliable live use.) |
+| Roads, long-distance paths, radar values | **Simulated** (labelled in the UI) |
+| Coastlines | Real — Natural Earth, encoded in `src/engine/geo-data.js` |
+| Saved analyses | `data/db/analyses.json` in this repo (shared) or localStorage |
 
-- **Read** — anyone, same-origin static fetch of the JSON file (free, public).
-- **Write** — GitHub Contents API `PUT` on that file. Click **DB** in the top bar and paste a GitHub token with `contents:write` on this repo. The token stays in your browser's localStorage and only ever goes to `api.github.com`.
-- Without a token everything works with browser-local history.
-- Deletes/clears overwrite the file; saves merge by entry id.
-
-## Data & honesty
-
-| Layer | Source | Status |
-|---|---|---|
-| Coastlines | Natural Earth 1:110m/1:50m/1:10m (public domain) | real, bundled |
-| Road network | procedural on real coastline | simulated |
-| Radar KPIs (K1, K2, V1) | seeded noise per spaceport | simulated — NISAR pipeline needs Earthdata login |
-| Daily rain (K8) | Open-Meteo API, 3 route points | **live**, falls back to simulated |
-| Monthly outlook | per-spaceport seasonal curve | simulated |
-| Sea/air weather (K9) | seeded values | simulated (Meteomatics planned) |
-| NASA craft & terminals | documented runs (SLS, Orion, Atlas V…) | real reference data |
-
-KPI thresholds and the math behind them are documented in the project spec artifact (mindmap → KPI chain, BPMN, ERD, WBS).
-
-## Run locally
-
-Any static server works (no build step):
+## Develop
 
 ```bash
-cd sure-nasa-spaceapps
-python -m http.server 8080
-# open http://localhost:8080
+npm install
+npm run dev      # http://localhost:5173/sure-nasa-spaceapps/
+npm run build    # tsc --noEmit + vite build → dist/
+npm run preview  # serve dist/ locally
 ```
 
 ## Deploy
 
-GitHub Pages serves the repo root of `main` (`.nojekyll` disables Jekyll). Push to `main` → site updates in ~1 min. History commits land under `data/db/analyses.json` on the same branch.
+GitHub Actions (`.github/workflows/deploy.yml`) builds on every push to `main`
+and publishes `dist/` to GitHub Pages. Repo Settings → Pages → Source:
+**GitHub Actions**.
 
-## Stack
+## Shared history
 
-Vanilla HTML/CSS/JS, canvas + SVG map, no dependencies, no build. ~2.3 MB of embedded encoded geography, everything else is a few KB.
-
-## Notes for judges
-
-- Radar values and roads are simulations standing in for the NISAR GCOV/GUNW pipeline described in the spec; every simulated layer is labelled as such on the page.
-- The daily forecast is genuinely live (Open-Meteo, CC BY 4.0, non-commercial) — drag the truck to another city and the bars change.
+Click **DB** in the top bar → paste a GitHub token with `contents:write` on
+this repo → Connect. "Save analysis" then commits to `data/db/analyses.json`
+and is readable by everyone (Pages rebuilds ~1 min after each commit).
+No token = private localStorage history, clearly labelled `DB: local`.

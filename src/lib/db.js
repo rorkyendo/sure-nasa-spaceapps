@@ -87,9 +87,20 @@ window.SUREDB = (() => {
     try { stat('Shared mode: ' + await test() + '. Saves go to the repo file.'); } catch (e) { stat('Token problem: ' + e.message, true); }
     paintBtn();
   }
+  /* --- Meteomatics login (rain radar overlay) --- */
+  const MMKEY = 'sure_mm_auth_v1';
+  const mmGet = () => { try { return localStorage.getItem(MMKEY) || ''; } catch (e) { return ''; } };
+  const mmSet = v => { try { v ? localStorage.setItem(MMKEY, v) : localStorage.removeItem(MMKEY); } catch (e) {} };
+  function mmStat() {
+    const e = $id('mmstat'); if (!e) return;
+    e.textContent = mmGet()
+      ? 'Login saved — live precipitation overlay is on.'
+      : 'No login — the rain radar overlay stays off. The base satellite map and forecast still work.';
+  }
+
   function wire() {
     const mb = $id('dbmodal'), bb = $id('dbbtn'), tk = $id('dbtok');
-    if (bb) bb.addEventListener('click', () => { refreshStat(); mb.classList.add('on'); });
+    if (bb) bb.addEventListener('click', () => { refreshStat(); mmStat(); mb.classList.add('on'); });
     if ($id('dbclose')) $id('dbclose').addEventListener('click', () => mb.classList.remove('on'));
     if (mb) mb.addEventListener('click', e => { if (e.target === mb) mb.classList.remove('on'); });
     if ($id('dbsave')) $id('dbsave').addEventListener('click', () => {
@@ -98,9 +109,17 @@ window.SUREDB = (() => {
       setToken(v); tk.value = ''; refreshStat();
     });
     if ($id('dboff')) $id('dboff').addEventListener('click', () => { setToken(''); refreshStat(); });
+    const mk = $id('mmtok');
+    if ($id('mmsave')) $id('mmsave').addEventListener('click', () => {
+      const v = (mk.value || '').trim();
+      if (!v || v.indexOf(':') < 0) { const e = $id('mmstat'); if (e) e.textContent = 'Paste as user:password.'; return; }
+      mmSet(v); mk.value = ''; mmStat(); if (window.SUREMMCHANGE) window.SUREMMCHANGE();
+    });
+    if ($id('mmoff')) $id('mmoff').addEventListener('click', () => { mmSet(''); mmStat(); if (window.SUREMMCHANGE) window.SUREMMCHANGE(); });
     paintBtn();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
 
   return { REPO, PATH, enabled, token, setToken, merge, pull, push, test };
 })();
+export {};

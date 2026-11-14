@@ -1,5 +1,13 @@
-
-(()=>{
+/* SURE engine - ported from the original vanilla mockup.
+   Imperative map renderer (canvas tiles + SVG overlay) + all route/radar
+   computation. React mounts the DOM shell with the same element ids, then
+   calls mount() once. Panels are still engine-rendered into those ids. */
+import './geo-data.js';
+const GEO=window.GEO;
+const listeners=new Set();
+export function sub(fn){listeners.add(fn);return()=>listeners.delete(fn)}
+let _v=0;export function ver(){return _v}
+export function emit(){_v++;listeners.forEach(f=>f())}
 "use strict";
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const COL={g:'#2fe48a',y:'#ffd23f',r:'#ff4d5e'},LBL={g:'GREEN',y:'YELLOW',r:'RED'},RANK={g:0,y:1,r:2};
@@ -32,18 +40,15 @@ const L110=decodeLand(GEO.L110,100),L50=decodeLand(GEO.L50,1000),L10=decodeLand(
 
 /* ---------- state ---------- */
 const S={sp:null,net:null,origin:null,wp:null,cargo:CARGO[0],segs:[],len:0,sel:null,day:0,mode:'d',rain:null,rainBase:null,rainSrc:'sim',w:900,h:600,dpr:1,view:{lon:-80.68,lat:28.52,z:10},snap:null,hotSp:null,fly:null,nets:{},routeMid:null,routes:[],ri:0,rec:0,pinned:false,pickMode:false,far:null,farBlobs:null};
-const stage=$('#stage'),cv=$('#base'),ov=$('#ov');
+let stage,cv,ov;
 const mer=(lon,lat)=>{const l=Math.max(-85.0511,Math.min(85.0511,lat)),sn=Math.sin(l*Math.PI/180);return[(lon+180)/360,.5-Math.log((1+sn)/(1-sn))/(4*Math.PI)]};
 const ws=()=>256*Math.pow(2,S.view.z);
 const GR=()=>ws()/(2*Math.PI);
 const wrapL=d=>((d+540)%360+360)%360-180;
-function updView(){const a=S.view.lon*Math.PI/180,b=S.view.lat*Math.PI/180,ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b);
- S.R=GR();S.vc=[cb*ca,cb*sa,sb];S.ve=[-sa,ca,0];S.vn=[-sb*ca,-sb*sa,cb];S.cx=S.w/2;S.cy=S.h/2}
-function P(lon,lat){const a=lon*Math.PI/180,b=lat*Math.PI/180,cb=Math.cos(b),x=cb*Math.cos(a),y=cb*Math.sin(a),z=Math.sin(b),c=x*S.vc[0]+y*S.vc[1]+z*S.vc[2];
- if(c<0)return[-9999,-9999,c];return[S.cx+S.R*(x*S.ve[0]+y*S.ve[1]),S.cy-S.R*(x*S.vn[0]+y*S.vn[1]+z*S.vn[2]),c]}
-function U(px,py){let x=(px-S.cx)/S.R,y=-(py-S.cy)/S.R;const r=Math.hypot(x,y);if(r>.999){x*=.999/r;y*=.999/r}
- const c=Math.sqrt(1-x*x-y*y),v=[x*S.ve[0]+y*S.vn[0]+c*S.vc[0],x*S.ve[1]+y*S.vn[1]+c*S.vc[1],y*S.vn[2]+c*S.vc[2]];
- return[S.view.lon+wrapL(Math.atan2(v[1],v[0])*180/Math.PI-S.view.lon),Math.asin(Math.max(-1,Math.min(1,v[2])))*180/Math.PI]}
+function updView(){S.R=GR();S.cx=S.w/2;S.cy=S.h/2;S.mv=mer(S.view.lon,S.view.lat)}
+const merYinv=y=>{const s=Math.tanh(Math.PI*(1-2*Math.max(0,Math.min(1,y))));return Math.asin(Math.max(-1,Math.min(1,s)))*180/Math.PI};
+function P(lon,lat){const m=mer(lon,lat);let dx=m[0]-S.mv[0];dx-=Math.round(dx);return[S.cx+dx*ws(),S.cy+(m[1]-S.mv[1])*ws(),1]}
+function U(px,py){const y=S.mv[1]+(py-S.cy)/ws(),lon=(S.mv[0]+(px-S.cx)/ws())*360-180;return[S.view.lon+wrapL(lon-S.view.lon),merYinv(y)]}
 function ringV(r){if(r.v)return r.v;const n=r.lon.length,v=new Float32Array(n*3);for(let j=0;j<n;j++){const a=r.lon[j]*Math.PI/180,b=r.lat[j]*Math.PI/180,cb=Math.cos(b);v[j*3]=cb*Math.cos(a);v[j*3+1]=cb*Math.sin(a);v[j*3+2]=Math.sin(b)}
  const m=[(r.b[0]+r.b[2])/2*Math.PI/180,(r.b[1]+r.b[3])/2*Math.PI/180];r.cv=[Math.cos(m[1])*Math.cos(m[0]),Math.cos(m[1])*Math.sin(m[0]),Math.sin(m[1])];r.rad=Math.hypot(r.b[2]-r.b[0],r.b[3]-r.b[1])/2*Math.PI/180;r.v=v;return v}
 
@@ -407,7 +412,7 @@ async function refreshLiveRain(){
   const r=await fetch(url);if(!r.ok)throw 0;
   const j=await r.json(),arr=Array.isArray(j)?j:[j];
   if(tok!==rainTok||arr.length!==3||!arr[0].daily||!arr[0].daily.time)throw 0;
-  const dates=arr[0].daily.time,WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dates=arr[0].daily.time;S.rainDates=dates;const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   DAYS=dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]}`});
   DSH=dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WD[d.getUTCDay()]} ${d.getUTCDate()}`});
   S.rain=dates.map((_,d)=>arr.map(a=>Math.round((a.daily.precipitation_sum[d]||0)*10)/10));
@@ -426,45 +431,61 @@ function stats(){
 
 /* ---------- base canvas ---------- */
 function sizeCanvas(){const r=stage.getBoundingClientRect();S.w=Math.max(300,r.width);S.h=Math.max(300,r.height);S.dpr=Math.min(2,window.devicePixelRatio||1);cv.width=S.w*S.dpr;cv.height=S.h*S.dpr;ov.setAttribute('viewBox',`0 0 ${S.w} ${S.h}`)}
+/* ---------- base canvas: real satellite tiles (Esri World Imagery) ---------- */
+const TILEURL='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+ REFURL='https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',tcache=new Map();
+function tileAt(u,tz,tx,ty){
+ const k=u[0]+tz+'/'+tx+'/'+ty,t=tcache.get(k);if(t===null)return null;if(t)return t.complete&&t.naturalWidth?t:null;
+ const im=new Image();im.src=u.replace('{z}',tz).replace('{x}',tx).replace('{y}',ty);
+ im.onload=()=>req();im.onerror=()=>{tcache.set(k,null);req()};tcache.set(k,im);return null;
+}
 function drawBase(){
- const ctx=cv.getContext('2d'),w=S.w,h=S.h,z=S.view.z,R=S.R,cx=S.cx,cy=S.cy;ctx.setTransform(S.dpr,0,0,S.dpr,0,0);
- ctx.fillStyle='#03060f';ctx.fillRect(0,0,w,h);
- const glow=ctx.createRadialGradient(cx,cy,R*.97,cx,cy,R*1.12);glow.addColorStop(0,'rgba(80,190,255,.42)');glow.addColorStop(1,'rgba(80,190,255,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(cx,cy,R*1.12,0,7);ctx.fill();
- const og=ctx.createRadialGradient(cx-R*.35,cy-R*.4,R*.05,cx,cy,R);og.addColorStop(0,'#123a66');og.addColorStop(.6,'#0a2040');og.addColorStop(1,'#040c1c');ctx.fillStyle=og;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill();
- ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.clip();
- const vr=Math.asin(Math.min(1,Math.hypot(w,h)/2/R)),ve=S.ve,vn=S.vn,vc=S.vc;
- // graticule
- const steps=[30,10,5,2,1,.5,.2,.1,.05,.02];let gs=30;for(const st of steps){if(st*Math.PI/180*R>=70)gs=st}
- ctx.strokeStyle='rgba(53,224,238,.09)';ctx.lineWidth=1;ctx.beginPath();
- const span=Math.min(180,vr*180/Math.PI*1.6+gs),la0=Math.max(-90,Math.floor((S.view.lat-span)/gs)*gs),la1=Math.min(90,S.view.lat+span),lo0=Math.floor((S.view.lon-(span>80?180:span/Math.max(.2,Math.cos(S.view.lat*Math.PI/180))))/gs)*gs,lo1=lo0+Math.min(360,2*(S.view.lon-lo0)+gs),sub=Math.max(gs/8,(la1-la0)/90);
- const seg=(f,a,b)=>{let pen=false;for(let t=a;t<=b+1e-9;t+=sub){const p=f(t);if(p[2]<0){pen=false;continue}pen?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);pen=true}};
- for(let lo=lo0;lo<=lo1;lo+=gs)seg(t=>P(lo,t),la0,la1);
- for(let la=la0;la<=la1;la+=gs){if(Math.abs(la)>89)continue;seg(t=>P(t,la),lo0,lo1)}
- ctx.stroke();
- // land
- const set=z<3.2?L110:z<6.4?L50:L10;
- ctx.beginPath();
- for(const r of set){const v=ringV(r),dc=Math.acos(Math.max(-1,Math.min(1,r.cv[0]*vc[0]+r.cv[1]*vc[1]+r.cv[2]*vc[2])));if(dc-r.rad>Math.min(Math.PI/2,vr)+.02)continue;
-  let lx=1e9,ly=1e9,first=true;const n=r.lon.length;
-  for(let j=0;j<n;j++){const a=v[j*3],b=v[j*3+1],c=v[j*3+2];let X=a*ve[0]+b*ve[1],Y=a*vn[0]+b*vn[1]+c*vn[2];if(a*vc[0]+b*vc[1]+c*vc[2]<0){const q=Math.hypot(X,Y)||1;X/=q;Y/=q}
-   X=cx+R*X;Y=cy-R*Y;if(!first&&j<n-1&&Math.abs(X-lx)<.7&&Math.abs(Y-ly)<.7)continue;if(first){ctx.moveTo(X,Y);first=false}else ctx.lineTo(X,Y);lx=X;ly=Y}
-  ctx.closePath()}
- const lg=ctx.createRadialGradient(cx-R*.35,cy-R*.4,R*.05,cx,cy,R);lg.addColorStop(0,'#1f4a5a');lg.addColorStop(.7,'#14303d');lg.addColorStop(1,'#0a1a24');ctx.fillStyle=lg;ctx.fill('evenodd');
- ctx.strokeStyle='rgba(53,224,238,.16)';ctx.lineWidth=5;ctx.stroke();ctx.strokeStyle='rgba(88,224,240,.85)';ctx.lineWidth=1.1;ctx.stroke();
- const sh=ctx.createRadialGradient(cx,cy,R*.55,cx,cy,R);sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(1,'rgba(0,4,14,.6)');ctx.fillStyle=sh;ctx.fillRect(cx-R,cy-R,2*R,2*R);
+ const ctx=cv.getContext('2d'),w=S.w,h=S.h,z=S.view.z;ctx.setTransform(S.dpr,0,0,S.dpr,0,0);
+ ctx.fillStyle='#060a14';ctx.fillRect(0,0,w,h);
+ const tz=Math.max(0,Math.min(19,Math.round(z))),nt=1<<tz,ts=256*Math.pow(2,z-tz);
+ const wx=S.mv[0]*ws(),wy=S.mv[1]*ws();
+ const ix0=Math.floor((wx-S.cx)/ts),ix1=Math.floor((wx+S.cx)/ts),iy0=Math.max(0,Math.floor((wy-S.cy)/ts)),iy1=Math.min(nt-1,Math.floor((wy+S.cy)/ts));
+ let drew=0;
+ for(let iy=iy0;iy<=iy1;iy++)for(let ix=ix0;ix<=ix1;ix++){const tx=((ix%nt)+nt)%nt,px=S.cx+ix*ts-wx,py=S.cy+iy*ts-wy;
+  const im=tileAt(TILEURL,tz,tx,iy);if(im){ctx.drawImage(im,px,py,ts+.6,ts+.6);drew++}
+  const rf=tileAt(REFURL,tz,tx,iy);if(rf)ctx.drawImage(rf,px,py,ts+.6,ts+.6)}
+ if(!drew){ctx.fillStyle='#0d1b30';ctx.strokeStyle='rgba(88,224,240,.45)';ctx.lineWidth=1;ctx.beginPath();
+  for(const r of L50){let f=1;for(let j=0;j<r.lon.length;j++){const p=P(r.lon[j],r.lat[j]);f?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]);f=0}ctx.closePath()}
+  ctx.fill('evenodd');ctx.stroke()}
  // storm cells on a long-distance route
- if(S.far&&S.farBlobs){for(const b of S.farBlobs){const[x,y]=P(b.lon,b.lat),rpx=Math.max(14,b.r*1000/mpp());const gr=ctx.createRadialGradient(x,y,0,x,y,rpx);gr.addColorStop(0,'rgba(90,168,255,.30)');gr.addColorStop(1,'rgba(90,168,255,0)');ctx.fillStyle=gr;ctx.fillRect(x-rpx,y-rpx,rpx*2,rpx*2)}}
- // local layer
+ if(S.far&&S.farBlobs){for(const b of S.farBlobs){const[x,y]=P(b.lon,b.lat),rpx=Math.max(14,b.r*1000/mpp(b.lat));const gr=ctx.createRadialGradient(x,y,0,x,y,rpx);gr.addColorStop(0,'rgba(90,168,255,.30)');gr.addColorStop(1,'rgba(90,168,255,0)');ctx.fillStyle=gr;ctx.fillRect(x-rpx,y-rpx,rpx*2,rpx*2)}}
+ // simulated service-road layer (near-spaceport playfield)
  if(S.net&&!S.far&&z>=7.2){
   const net=S.net;
-  for(const b of net.blobs){const[x,y]=P(...net.ll(b[0],b[1])),rpx=b[2]*1000/mpp();const gr=ctx.createRadialGradient(x,y,0,x,y,rpx);gr.addColorStop(0,'rgba(90,168,255,.28)');gr.addColorStop(1,'rgba(90,168,255,0)');ctx.fillStyle=gr;ctx.fillRect(x-rpx,y-rpx,rpx*2,rpx*2)}
+  for(const b of net.blobs){const bl=net.ll(b[0],b[1]),[x,y]=P(bl[0],bl[1]),rpx=b[2]*1000/mpp(bl[1]);const gr=ctx.createRadialGradient(x,y,0,x,y,rpx);gr.addColorStop(0,'rgba(90,168,255,.28)');gr.addColorStop(1,'rgba(90,168,255,0)');ctx.fillStyle=gr;ctx.fillRect(x-rpx,y-rpx,rpx*2,rpx*2)}
   const rw=Math.max(1.2,Math.min(5,1.2+(z-8)*.9));
   const draw=(col,wd)=>{ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();for(const e of net.edges){if(!isFinite(net.dist[e.a])||!isFinite(net.dist[e.b]))continue;e.ll.forEach((q,i)=>{const[x,y]=P(q[0],q[1]);i?ctx.lineTo(x,y):ctx.moveTo(x,y)})}ctx.stroke()};
-  draw('#2a4a66',rw+1.6);draw('#456a8a',Math.max(.6,rw*.4));
+  draw('rgba(42,74,102,.9)',rw+1.6);draw('rgba(110,150,190,.85)',Math.max(.6,rw*.4));
  }
- ctx.restore();
+ if(S.radar&&S.radar.im){const[nw,se]=[S.radar.nw,S.radar.se],a=P(nw[0],nw[1]),b=P(se[0],se[1]);ctx.drawImage(S.radar.im,a[0],a[1],b[0]-a[0],b[1]-a[1])}
+ const vg=ctx.createRadialGradient(S.cx,S.cy,Math.min(w,h)*.3,S.cx,S.cy,Math.max(w,h)*.78);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(2,5,12,.5)');ctx.fillStyle=vg;ctx.fillRect(0,0,w,h);
 }
-const mpp=()=>6378137/GR();
+const mpp=lat=>156543.03392*Math.cos(((lat==null?S.view.lat:lat)*Math.PI)/180)/Math.pow(2,S.view.z);
+
+/* ---------- live rain radar: Meteomatics WMS (user-supplied login, stays in browser) ---------- */
+const mmAuth=()=>{try{return localStorage.getItem('sure_mm_auth_v1')||''}catch(e){return''}};
+const m385=(lon,lat)=>[lon*20037508.34/180,Math.log(Math.tan(Math.PI/4+Math.max(-85.05,Math.min(85.05,lat))*Math.PI/360))*6378137];
+let radarTok=0,radarT=null;const radarCache=new Map();
+function radarDate(){const d=S.rainDates&&S.rainDates[S.day];return(d||new Date(Date.now()+S.day*864e5).toISOString().slice(0,10))+'T12:00:00Z'}
+function scheduleRadar(){
+ const tog=$('#togRadar'),lb=$('#radarLbl'),auth=mmAuth();
+ if(lb)lb.textContent=auth?'Rain radar · live':'Rain radar · key via DB';
+ if(!tog||!tog.checked||MODEM()||!auth){if(S.radar){S.radar=null;req()}return}
+ clearTimeout(radarT);radarT=setTimeout(()=>{
+  const tok=++radarTok,nw=U(0,0),se=U(S.w,S.h);
+  const[x0,y0]=m385(nw[0],se[1]),[x1,y1]=m385(se[0],nw[1]);
+  const ci=auth.indexOf(':'),au=ci<0?'https://':('https://'+encodeURIComponent(auth.slice(0,ci))+':'+encodeURIComponent(auth.slice(ci+1))+'@');
+  const url=au+'api.meteomatics.com/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=precip_1h:mm&CRS=EPSG:3857&BBOX='+x0.toFixed(0)+','+y0.toFixed(0)+','+x1.toFixed(0)+','+y1.toFixed(0)+'&WIDTH='+Math.min(1600,Math.round(S.w))+'&HEIGHT='+Math.min(1200,Math.round(S.h))+'&FORMAT=image/png&TRANSPARENT=TRUE&TIME='+encodeURIComponent(radarDate());
+  const ch=radarCache.get(url);if(ch){S.radar={im:ch,nw,se};req();return}
+  const im=new Image();im.onload=()=>{if(radarCache.size>24)radarCache.clear();radarCache.set(url,im);if(tok===radarTok){S.radar={im,nw,se};req()}};im.src=url;
+ },550);
+}
+window.SUREMMCHANGE=()=>{radarCache.clear();S.radar=null;scheduleRadar()};
 
 /* ---------- SVG overlay ---------- */
 const dPath=pts=>{let d='',pen=false;for(const q of pts){const p=P(q[0],q[1]);if(p[2]<0){pen=false;continue}d+=(pen?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)+' ';pen=true}return d||'M-9 -9'};
@@ -526,7 +547,7 @@ function hud(){
  $('#scale').innerHTML=`<span>${b>=1000?b/1000+' km':b+' m'}</span><i style="width:${b/mpp()}px"></i>`;
  $('#hint2').style.display=(S.far||z>=7)?'block':'none';
 }
-let rq=false;function req(){if(rq)return;rq=true;requestAnimationFrame(()=>{rq=false;updView();drawBase();drawOverlay();hud()})}
+let rq=false;function req(){if(rq)return;rq=true;requestAnimationFrame(()=>{rq=false;updView();drawBase();drawOverlay();hud();scheduleRadar();emit()})}
 
 /* ---------- camera ---------- */
 const clampZ=z=>Math.max(1.6,Math.min(13,z));
@@ -534,10 +555,12 @@ function fitBounds(){
  const net=S.net;let pts;
  if(S.far){pts=[];S.routes.forEach(r=>r.polyLL.forEach((q,i)=>{if(i%4===0)pts.push(q)}));pts.push([S.sp.lon,S.sp.lat])}
  else{pts=[net.nodes[S.origin].ll,net.ll(0,0)];if(S.wp!=null)pts.push(net.nodes[S.wp].ll)}
- let m=[0,0,0];const vs=pts.map(p=>toV(p[0],p[1]));vs.forEach(v=>{m[0]+=v[0];m[1]+=v[1];m[2]+=v[2]});const c=fromV(m);let th=0;vs.forEach(v=>{th=Math.max(th,Math.acos(Math.max(-1,Math.min(1,vdot(v,toV(c[0],c[1]))))))});
- const aw=Math.max(200,S.w-300),ah=Math.max(200,S.h-275),Rr=Math.min(aw,ah)/2/Math.max(.004,th>=1.35?1:Math.sin(th)*1.08);
- const z=clampZ(Math.min(Math.log2(2*Math.PI*Math.max(Rr,S.far?Math.min(S.w,S.h)*.47:0)/256),12.2));
- return{lon:c[0],lat:Math.max(-80,Math.min(80,c[1]+(th<.3?-20/GR()*57.3*0:0))),z};
+ const lon0=pts[0][0];let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+ pts.forEach(p=>{const m=mer(lon0+wrapL(p[0]-lon0),p[1]);x0=Math.min(x0,m[0]);x1=Math.max(x1,m[0]);y0=Math.min(y0,m[1]);y1=Math.max(y1,m[1])});
+ const aw=Math.max(200,S.w-300),ah=Math.max(200,S.h-275);
+ const z=clampZ(Math.min(Math.log2(aw/Math.max(8,(x1-x0)*256)),Math.log2(ah/Math.max(8,(y1-y0)*256))));
+ const cl=merYinv((y0+y1)/2);
+ return{lon:x1>-1e8?(x0+x1)/2*360-180:lon0,lat:Math.max(-80,Math.min(80,cl)),z};
 }
 function flyTo(t,ms=900){
  t={...t,lon:S.view.lon+wrapL(t.lon-S.view.lon)};const v0={...S.view},d=Math.hypot(t.lon-v0.lon,t.lat-v0.lat),bump=Math.min(3.5,d/18),t0=performance.now();S.fly=true;
@@ -548,12 +571,6 @@ function flyTo(t,ms=900){
  requestAnimationFrame(step);
 }
 function zoomAt(z2,mx,my){const a=U(mx,my);S.view.z=clampZ(z2);updView();const b=U(mx,my);S.view.lon+=wrapL(a[0]-b[0]);S.view.lat=Math.max(-85,Math.min(85,S.view.lat+a[1]-b[1]));req()}
-stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect();zoomAt(S.view.z-e.deltaY*.0018,e.clientX-r.left,e.clientY-r.top)},{passive:false});
-$('#zin').onclick=()=>flyTo({...S.view,z:clampZ(S.view.z+1)},260);
-$('#zout').onclick=()=>flyTo({...S.view,z:clampZ(S.view.z-1)},260);
-$('#zcity').onclick=()=>flyTo(fitBounds(),700);
-$('#zglobal').onclick=()=>flyTo({lon:S.view.lon,lat:Math.max(-35,Math.min(35,S.view.lat)),z:clampZ(Math.log2(2*Math.PI*Math.min(S.w,S.h)*.4/256))},1100);
-
 /* ---------- selection and panels ---------- */
 function select(i){S.sel=i;drawOverlay();renderDetail();$$('.li').forEach(e=>e.classList.toggle('on',+e.dataset.i===i))}
 function sparkline(s){
@@ -608,7 +625,7 @@ function renderDay(){
  $('#rainov').style.opacity=v>=50?.3:v>=30?.14:0;
  $$('#qchips .qc').forEach(e=>e.classList.toggle('on',+e.dataset.d===d));
  $$('#modes .qc').forEach(e=>e.classList.toggle('on',(e.dataset.m==='m')===M));
- drawRain();renderDetail();renderRoutes();renderHead();drawOverlay();
+ drawRain();renderDetail();renderRoutes();renderHead();drawOverlay();emit();
 }
 function drawRain(){
  const M=MODEM(),n=M?60:8,w=1000,h=120,px=40,pb=M?34:26,bw=(w-px-10)/n,Y=v=>h-pb-Math.min(90,v)/90*(h-pb-14);
@@ -625,7 +642,7 @@ function drawRain(){
  $('#rain').innerHTML=o;
  $$('#rain .b').forEach(e=>e.addEventListener('click',()=>setDay(+e.dataset.d)));
 }
-function setDay(d){const before=S.ri,bm=S.tmCur;S.pinned=false;S.day=d;renderDay();if(S.far&&S.tmCur!==bm&&!S.tmUser)toast(`Recommended transport is now ${MODEL[S.tmCur]} for ${cur().l}.`);else if(S.ri!==before)toast(`Recommended route is now ${S.routes[S.rec].label} for ${cur().l}.`)}
+function setDay(d){const before=S.ri,bm=S.tmCur;S.pinned=false;S.day=d;scheduleRadar();renderDay();if(S.far&&S.tmCur!==bm&&!S.tmUser)toast(`Recommended transport is now ${MODEL[S.tmCur]} for ${cur().l}.`);else if(S.ri!==before)toast(`Recommended route is now ${S.routes[S.rec].label} for ${cur().l}.`)}
 
 /* ---------- actions ---------- */
 function nearestNode(lon,lat,excl){const net=S.net,x=(lon-net.lon0)*net.kx,y=(lat-net.lat0)*net.ky;let b=1e9,id=-1;for(const n of net.nodes){if(n.id===net.pad||n.id===excl||!isFinite(net.dist[n.id]))continue;const d=Math.hypot(n.x-x,n.y-y);if(d<b){b=d;id=n.id}}return{id,km:b}}
@@ -687,34 +704,6 @@ function up(e){
   if(kind==='truck')setOrigin(n.id);else{if(n.id===S.origin&&!S.far){toast('Pick a point away from the pickup.');drawOverlay();return}setWaypoint(n.id)}
  }
 }
-$('#dragTruck').addEventListener('pointerdown',e=>startDrag('truck',e,false));
-stage.addEventListener('pointerdown',e=>{
- if(e.target.closest('.dock,.zoomc'))return;
- const t=e.target.closest('[data-h]'),k=t&&t.dataset.h;
- if(k==='truck'||k==='rocket'||k==='grip'||k==='wp'){
-  if(k==='rocket'){pend={type:'rocket'};}else{startDrag(k,e,true);return}
- }
- else if(k==='route')pend={type:'route',r:+t.dataset.r};
- else if(k==='seg')pend={type:'seg',i:+t.dataset.i};
- else if(k==='sp')pend={type:'sp',id:t.dataset.id};else pend=null;
- pan={x:e.clientX,y:e.clientY,lon:S.view.lon,lat:S.view.lat,moved:0};stage.setPointerCapture(e.pointerId);
-});
-stage.addEventListener('pointermove',e=>{
- if(pan){const dx=e.clientX-pan.x,dy=e.clientY-pan.y;pan.moved=Math.max(pan.moved,Math.hypot(dx,dy));if(pan.moved>5){stage.classList.add('panning');const k=180/Math.PI/S.R;S.view.lat=Math.max(-85,Math.min(85,pan.lat+dy*k));S.view.lon=pan.lon-dx*k/Math.max(.25,Math.cos(S.view.lat*Math.PI/180));req();$('#tip').style.display='none'}return}
- const rt=e.target.closest&&e.target.closest('[data-h="route"]'),t=e.target.closest&&e.target.closest('[data-h="seg"]'),tp=$('#tip');
- if(rt&&!t){const r=S.routes[+rt.dataset.r],sc=scoreRoute(r,cur().v),[x,y]=stageXY(e);tp.style.display='block';tp.innerHTML=`${r.label} · ${fe(r.len)} km · ${fmtT(sc.t)} · ${fe(sc.eff)} min${+rt.dataset.r===S.rec?' · <b style="color:#ffd23f">recommended</b>':' · click to see why'}`;tp.style.left=Math.min(S.w-300,x+14)+'px';tp.style.top=(y+14)+'px'}
- else if(t){const s=S.segs[+t.dataset.i],[x,y]=stageXY(e);tp.style.display='block';tp.innerHTML=`Segment ${s.i+1} · km ${f1(s.km0)}–${f1(s.km1)} · <b style="color:${COL[s.k4]}">${LBL[s.k4]}</b>`;tp.style.left=Math.min(S.w-240,x+14)+'px';tp.style.top=(y+14)+'px'}else tp.style.display='none';
-});
-stage.addEventListener('pointerup',e=>{
- if(!pan)return;const moved=pan.moved;pan=null;stage.classList.remove('panning');
- if(moved<5&&pend){if(pend.type==='seg')select(pend.i);else if(pend.type==='route')setRoute(pend.r,true);else if(pend.type==='sp')pickSpaceport(pend.id);else if(pend.type==='rocket')flyTo(fitBounds(),600)}
- else if(moved<5&&S.pickMode&&S.net){const[x,y]=stageXY(e),[lo,lat]=U(x,y),lon=relPad(lo),n=nearestNode(lon,lat,S.far?null:S.origin);if(n.km<7){setPickMode(false);setOrigin(n.id)}else if(isLand(lon,lat)){setPickMode(false);setFar(mkFar(lon,lat))}else toast('Click on land to set the pickup.')}
- pend=null;
-});
-stage.addEventListener('dblclick',e=>{if(e.target.closest('[data-h],.dock,.zoomc'))return;const[x,y]=stageXY(e);zoomAt(S.view.z+1,x,y)});
-stage.addEventListener('mouseleave',()=>$('#tip').style.display='none');
-
-/* ---------- history ---------- */
 const HK='sure_history_v1';
 function hget(){try{return JSON.parse(localStorage.getItem(HK)||'[]')}catch(e){return window.__mem||[]}}
 function hset(a){try{localStorage.setItem(HK,JSON.stringify(a))}catch(e){window.__mem=a}}
@@ -741,14 +730,6 @@ function openHist(id){
  S.mode=h.mode;chips();loadSpaceport(h.sp,true);S.far=h.far||null;S.origin=h.o;S.wp=h.wp;S.cargo=h.cargo;$('#cargo').value=h.cargo;$('#dockTruck').innerHTML=`<use href="#${TS()}"/>`;S.day=h.idx;
  recomputeUI(true);S.tmUser=h.tm||null;renderDay();if(h.ri!=null&&S.routes[h.ri]&&h.ri!==S.ri)setRoute(h.ri,true);$('#modal').classList.remove('on');toast('Saved analysis restored.');
 }
-$('#save').addEventListener('click',saveAnalysis);
-$('#hist').addEventListener('click',()=>{renderHist();$('#modal').classList.add('on');
- if(window.SUREDB)SUREDB.pull().then(r=>{hset(SUREDB.merge(hget(),r));renderHist()}).catch(()=>{})});
-$('#hclose').addEventListener('click',()=>$('#modal').classList.remove('on'));
-$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.remove('on')});
-$('#hclear').addEventListener('click',()=>{hset([]);renderHist();
- if(window.SUREDB&&SUREDB.enabled())SUREDB.push([],'chore(db): clear analyses',{replace:true}).catch(e=>toast('Shared clear failed ('+e.message+').'))});
-
 /* ---------- route panels ---------- */
 function cnt3(r){const c={g:0,y:0,r:0};r.segs.forEach(s=>c[s.k4]++);return c}
 const PARTS={base:'a longer trip at normal speed',sat:'slower yellow and red segments',rain:'slower wet-prone road in the rain',red:'extra red segments'};
@@ -825,21 +806,66 @@ function coachShow(){
  c.classList.add('on');$('#dragTruck').classList.add('coachpulse');clearTimeout(coachT);coachT=setTimeout(coachHide,23000);
 }
 function coachHide(){coachOn=false;clearTimeout(coachT);const c=$('#coach');if(c)c.classList.remove('on');$('#dragTruck').classList.remove('coachpulse')}
+function chips(){const L=MODEM()?[['This month',0],['+6 months',6],['+1 year',12],['+3 years',36],['+5 years',59]]:[['Today',0],['Tomorrow',1],['+3 days',3],['+7 days',7]];
+ $('#qchips').innerHTML=L.map(a=>`<button class="qc" data-d="${a[1]}">${a[0]}</button>`).join('');$$('#qchips .qc').forEach(b=>b.addEventListener('click',()=>setDay(+b.dataset.d)))}
+/* ---------- mount: wire DOM provided by the React shell ---------- */
+export function mount(){
+ stage=$('#stage');cv=$('#base');ov=$('#ov');
+stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect();zoomAt(S.view.z-e.deltaY*.0018,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+$('#dragTruck').addEventListener('pointerdown',e=>startDrag('truck',e,false));
+$('#save').addEventListener('click',saveAnalysis);
 $('#pickGo').addEventListener('click',pickFromText);
+$('#zin').onclick=()=>flyTo({...S.view,z:clampZ(S.view.z+1)},260);
+$('#zout').onclick=()=>flyTo({...S.view,z:clampZ(S.view.z-1)},260);
+$('#zcity').onclick=()=>flyTo(fitBounds(),700);
+$('#zglobal').onclick=()=>flyTo({lon:20,lat:15,z:clampZ(Math.log2(Math.min(S.w,S.h)*.9/256))},1100);
+
+stage.addEventListener('pointerdown',e=>{
+ if(e.target.closest('.dock,.zoomc'))return;
+ const t=e.target.closest('[data-h]'),k=t&&t.dataset.h;
+ if(k==='truck'||k==='rocket'||k==='grip'||k==='wp'){
+  if(k==='rocket'){pend={type:'rocket'};}else{startDrag(k,e,true);return}
+ }
+ else if(k==='route')pend={type:'route',r:+t.dataset.r};
+ else if(k==='seg')pend={type:'seg',i:+t.dataset.i};
+ else if(k==='sp')pend={type:'sp',id:t.dataset.id};else pend=null;
+ pan={x:e.clientX,y:e.clientY,m0:S.mv.slice(),moved:0};stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('pointermove',e=>{
+ if(pan){const dx=e.clientX-pan.x,dy=e.clientY-pan.y;pan.moved=Math.max(pan.moved,Math.hypot(dx,dy));if(pan.moved>5){stage.classList.add('panning');const w0=ws(),mx=pan.m0[0]-dx/w0,my=Math.max(0,Math.min(1,pan.m0[1]-dy/w0));S.view.lon=S.view.lon+wrapL(mx*360-180-S.view.lon);S.view.lat=merYinv(my);req();$('#tip').style.display='none'}return}
+ const rt=e.target.closest&&e.target.closest('[data-h="route"]'),t=e.target.closest&&e.target.closest('[data-h="seg"]'),tp=$('#tip');
+ if(rt&&!t){const r=S.routes[+rt.dataset.r],sc=scoreRoute(r,cur().v),[x,y]=stageXY(e);tp.style.display='block';tp.innerHTML=`${r.label} · ${fe(r.len)} km · ${fmtT(sc.t)} · ${fe(sc.eff)} min${+rt.dataset.r===S.rec?' · <b style="color:#ffd23f">recommended</b>':' · click to see why'}`;tp.style.left=Math.min(S.w-300,x+14)+'px';tp.style.top=(y+14)+'px'}
+ else if(t){const s=S.segs[+t.dataset.i],[x,y]=stageXY(e);tp.style.display='block';tp.innerHTML=`Segment ${s.i+1} · km ${f1(s.km0)}–${f1(s.km1)} · <b style="color:${COL[s.k4]}">${LBL[s.k4]}</b>`;tp.style.left=Math.min(S.w-240,x+14)+'px';tp.style.top=(y+14)+'px'}else tp.style.display='none';
+});
+stage.addEventListener('pointerup',e=>{
+ if(!pan)return;const moved=pan.moved;pan=null;stage.classList.remove('panning');
+ if(moved<5&&pend){if(pend.type==='seg')select(pend.i);else if(pend.type==='route')setRoute(pend.r,true);else if(pend.type==='sp')pickSpaceport(pend.id);else if(pend.type==='rocket')flyTo(fitBounds(),600)}
+ else if(moved<5&&S.pickMode&&S.net){const[x,y]=stageXY(e),[lo,lat]=U(x,y),lon=relPad(lo),n=nearestNode(lon,lat,S.far?null:S.origin);if(n.km<7){setPickMode(false);setOrigin(n.id)}else if(isLand(lon,lat)){setPickMode(false);setFar(mkFar(lon,lat))}else toast('Click on land to set the pickup.')}
+ pend=null;
+});
+stage.addEventListener('dblclick',e=>{if(e.target.closest('[data-h],.dock,.zoomc'))return;const[x,y]=stageXY(e);zoomAt(S.view.z+1,x,y)});
+stage.addEventListener('mouseleave',()=>$('#tip').style.display='none');
+
+/* ---------- history ---------- */
+$('#hist').addEventListener('click',()=>{renderHist();$('#modal').classList.add('on');
+ if(window.SUREDB)SUREDB.pull().then(r=>{hset(SUREDB.merge(hget(),r));renderHist()}).catch(()=>{})});
+$('#hclose').addEventListener('click',()=>$('#modal').classList.remove('on'));
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.remove('on')});
+$('#hclear').addEventListener('click',()=>{hset([]);renderHist();
+ if(window.SUREDB&&SUREDB.enabled())SUREDB.push([],'chore(db): clear analyses',{replace:true}).catch(e=>toast('Shared clear failed ('+e.message+').'))});
+
 $('#pickText').addEventListener('keydown',e=>{if(e.key==='Enter')pickFromText()});
 $('#pickText').addEventListener('change',pickFromText);
 $('#pickMap').addEventListener('click',()=>setPickMode(!S.pickMode));
 /* ---------- init ---------- */
-$('#cargo').innerHTML=CARGO.map(c=>`<option>${c}</option>`).join('');
 $('#cargo').addEventListener('change',e=>{S.cargo=e.target.value;$('#dockTruck').innerHTML=`<use href="#${TS()}"/>`;renderStats()});
 $('#pills').innerHTML='<label class="lb" for="spsel">Spaceport</label><select id="spsel">'+SP.map(s=>`<option value="${s.id}">${s.name} (${s.ctry})</option>`).join('')+'</select>';
 $('#spsel').addEventListener('change',e=>pickSpaceport(e.target.value));
-function chips(){const L=MODEM()?[['This month',0],['+6 months',6],['+1 year',12],['+3 years',36],['+5 years',59]]:[['Today',0],['Tomorrow',1],['+3 days',3],['+7 days',7]];
- $('#qchips').innerHTML=L.map(a=>`<button class="qc" data-d="${a[1]}">${a[0]}</button>`).join('');$$('#qchips .qc').forEach(b=>b.addEventListener('click',()=>setDay(+b.dataset.d)))}
 $$('#modes .qc').forEach(b=>b.addEventListener('click',()=>{S.mode=b.dataset.m;S.day=0;S.pinned=false;chips();renderDay()}));
 chips();
 $('#day').addEventListener('input',e=>setDay(+e.target.value));
 $('#togWet').addEventListener('change',drawOverlay);
+$('#togRadar').addEventListener('change',()=>{S.radar=null;scheduleRadar()});
 $('#reset').addEventListener('click',()=>{S.day=0;S.mode='d';chips();S.cargo=CARGO[0];$('#cargo').value=CARGO[0];$('#dockTruck').innerHTML='<use href="#i-truck-0"/>';S.nets={};loadSpaceport('ksc',true);toast('View reset.');coachOn=true;setTimeout(coachShow,300)});
 new ResizeObserver(()=>{sizeCanvas();req()}).observe(stage);
 sizeCanvas();
@@ -847,5 +873,7 @@ renderHist();
 if(window.SUREDB)SUREDB.pull().then(r=>{hset(SUREDB.merge(hget(),r));renderHist()}).catch(()=>{});
 loadSpaceport('ksc',true);
 setTimeout(coachShow,500);
-window.__S=S;window.__t={landFrac,AIRPORTS,PORTS,refreshModes,setMode,buildModes,P,U,setFar,mkFar,isLand,fmtT,PICKS,coachShow,coachHide,setRoute,scoreRoute,cur,pick:pickSpaceport,setDay,setOrigin,setWaypoint,flyTo,fitBounds,nearestNode,loadSpaceport};
-})();
+window.__S=S;
+ emit();
+}
+export{S,SP,CARGO,PICKS,MODEL,MORD,COL,LBL,RANK,fmtT,fe,f1,cur,stats,scoreRoute,cnt3,bigPart,PARTS,setDay,setRoute,setMode,select,focusSeg,focusRoute,fitBounds,flyTo,zoomAt,pickSpaceport,loadSpaceport,setOrigin,setWaypoint,setFar,mkFar,isLand,landId,nearestNode,nodeName,reachNodes,setPickMode,pickFromText,saveAnalysis,openHist,hget,hset,renderHist,renderDay,renderStats,renderDetail,renderRoutes,drawOverlay,req,toast,coachShow,monthLabel,legBest,legRec,applyWeather,worstTxt,vehHTML,refHTML,legBox,sparkline,modeBar,noneBanner,weakestIdx,mpp,P,U,mer,wrapL,relPad,scheduleRadar,mmAuth,MODEM,st1,st2,st8,stv1,rl,risk,worst,TS};

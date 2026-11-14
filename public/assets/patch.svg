@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="spaceBg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#0f1b33"/>
+      <stop offset="70%" stop-color="#06080f"/>
+      <stop offset="100%" stop-color="#020307"/>
+    </radialGradient>
+
+    <!-- Radar Sweep Gradient -->
+    <linearGradient id="radarBeam" x1="0%" y1="0%" x2="40%" y2="100%">
+      <stop offset="0%" stop-color="#35e0ee" stop-opacity="0.7"/>
+      <stop offset="40%" stop-color="#35e0ee" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#2fe48a" stop-opacity="0.0"/>
+    </linearGradient>
+
+    <!-- Ground Gradient -->
+    <linearGradient id="groundGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0a1926"/>
+      <stop offset="50%" stop-color="#0e2a36"/>
+      <stop offset="100%" stop-color="#091b22"/>
+    </linearGradient>
+
+    <!-- Route Line Glow -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="0.6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Inner Circle Clip -->
+    <clipPath id="patchClip">
+      <circle cx="60" cy="60" r="43.5"/>
+    </clipPath>
+
+    <!-- Text Paths -->
+    <!-- Top Arc (Clockwise for upright text) -->
+    <path id="textArcTop" d="M 12,60 A 48,48 0 0,1 108,60" fill="none"/>
+    <!-- Bottom Arc (Clockwise from left for upright text) -->
+    <path id="textArcBottom" d="M 18,60 A 48,48 0 0,0 102,60" fill="none"/>
+  </defs>
+
+  <!-- Base Patch Background -->
+  <circle cx="60" cy="60" r="59" fill="#06080f"/>
+
+  <!-- Outer Ring Band -->
+  <circle cx="60" cy="60" r="58" fill="none" stroke="#35e0ee" stroke-width="1"/>
+  <circle cx="60" cy="60" r="44" fill="none" stroke="#35e0ee" stroke-width="0.8" stroke-dasharray="1.5,1.5"/>
+
+  <!-- Inner Artwork Clipped -->
+  <g clip-path="url(#patchClip)">
+    <!-- Sky Background -->
+    <rect x="15" y="15" width="90" height="90" fill="url(#spaceBg)"/>
+
+    <!-- Stars Field -->
+    <!-- Constellation & micro stars -->
+    <circle cx="28" cy="30" r="0.5" fill="#ffffff" opacity="0.8"/>
+    <circle cx="34" cy="22" r="0.4" fill="#35e0ee" opacity="0.7"/>
+    <circle cx="42" cy="34" r="0.6" fill="#ffffff" opacity="0.9"/>
+    <circle cx="50" cy="25" r="0.4" fill="#ffffff" opacity="0.6"/>
+    <circle cx="78" cy="25" r="0.5" fill="#35e0ee" opacity="0.7"/>
+    <circle cx="92" cy="35" r="0.6" fill="#ffffff" opacity="0.8"/>
+    <circle cx="86" cy="45" r="0.4" fill="#ffffff" opacity="0.5"/>
+    <circle cx="25" cy="48" r="0.5" fill="#2fe48a" opacity="0.6"/>
+    <circle cx="70" cy="36" r="0.3" fill="#ffffff" opacity="0.6"/>
+
+    <!-- 4-point Sparkle Star -->
+    <path d="M 32,40 Q 32,37 33,37 Q 34,37 34,40 Q 34,43 33,43 Q 32,43 32,40 Z" fill="#ffffff"/>
+    <path d="M 29,40 Q 32,40 32,39 Q 32,40 35,40 Q 32,40 32,41 Q 32,40 29,40 Z" fill="#ffffff"/>
+
+    <path d="M 88,28 Q 88,26 88.7,26 Q 89.4,26 89.4,28 Q 89.4,30 88.7,30 Q 88,30 88,28 Z" fill="#35e0ee"/>
+    <path d="M 86,28 Q 88,28 88,27.3 Q 88,28 90.4,28 Q 88,28 88,28.7 Q 88,28 86,28 Z" fill="#35e0ee"/>
+
+    <!-- SAR Satellite Radar Beams (Downwards swath) -->
+    <polygon points="36,25 20,86 82,86" fill="url(#radarBeam)"/>
+
+    <!-- Radar Pulse Waves (Synthetic Aperture Radar scan rings) -->
+    <ellipse cx="36" cy="25" rx="14" ry="10" fill="none" stroke="#35e0ee" stroke-width="0.5" stroke-dasharray="1.5,1" opacity="0.7"/>
+    <ellipse cx="36" cy="25" rx="28" ry="19" fill="none" stroke="#35e0ee" stroke-width="0.5" stroke-dasharray="2,1.5" opacity="0.6"/>
+    <ellipse cx="36" cy="25" rx="42" ry="29" fill="none" stroke="#2fe48a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.5"/>
+    <ellipse cx="36" cy="25" rx="56" ry="38" fill="none" stroke="#35e0ee" stroke-width="0.4" stroke-dasharray="2.5,2" opacity="0.4"/>
+
+    <!-- Ground & Sea Horizon Landscape -->
+    <path d="M 15,84 Q 45,79 70,82 T 105,80 L 105,105 L 15,105 Z" fill="url(#groundGrad)"/>
+    <path d="M 15,84 Q 45,79 70,82 T 105,80" fill="none" stroke="#2fe48a" stroke-width="0.5" opacity="0.6"/>
+
+    <!-- Water waves near supply ship -->
+    <path d="M 45,86 C 48,85 50,87 53,86 C 56,85 58,87 61,86" fill="none" stroke="#35e0ee" stroke-width="0.5" opacity="0.7"/>
+    <path d="M 47,88 C 50,87 52,89 55,88 C 58,87 60,89 63,88" fill="none" stroke="#35e0ee" stroke-width="0.4" opacity="0.4"/>
+
+    <!-- Supply Route Curved Path (Truck -> Ship -> Rocket) -->
+    <path d="M 28,82 Q 38,76 52,82 T 84,78" fill="none" stroke="#2fe48a" stroke-width="1" stroke-dasharray="2,1" filter="url(#glow)"/>
+
+    <!-- SAR Satellite (Top Left, tilted pointing down-right) -->
+    <g transform="translate(36,25) rotate(25)">
+      <!-- Solar Panels -->
+      <rect x="-15" y="-3.5" width="9" height="7" fill="#0d3b59" stroke="#35e0ee" stroke-width="0.5" rx="0.5"/>
+      <line x1="-10.5" y1="-3.5" x2="-10.5" y2="3.5" stroke="#35e0ee" stroke-width="0.3"/>
+      <line x1="-15" y1="0" x2="-6" y2="0" stroke="#35e0ee" stroke-width="0.3"/>
+
+      <rect x="6" y="-3.5" width="9" height="7" fill="#0d3b59" stroke="#35e0ee" stroke-width="0.5" rx="0.5"/>
+      <line x1="10.5" y1="-3.5" x2="10.5" y2="3.5" stroke="#35e0ee" stroke-width="0.3"/>
+      <line x1="6" y1="0" x2="15" y2="0" stroke="#35e0ee" stroke-width="0.3"/>
+
+      <!-- Central Satellite Body Bus -->
+      <rect x="-5" y="-4" width="10" height="8" fill="#e1f8fc" stroke="#35e0ee" stroke-width="0.6" rx="0.8"/>
+      <!-- Gold Foil / Sensor detail -->
+      <rect x="-3" y="-2.5" width="6" height="5" fill="#f5be24" rx="0.4"/>
+
+      <!-- SAR Antenna Boom and Planar Array -->
+      <line x1="0" y1="4" x2="0" y2="7.5" stroke="#ffffff" stroke-width="0.7"/>
+      <!-- Planar SAR Radar Antenna -->
+      <rect x="-8" y="7.5" width="16" height="2.2" fill="#35e0ee" stroke="#ffffff" stroke-width="0.4" rx="0.3"/>
+      <!-- Antenna sub-elements -->
+      <line x1="-4" y1="7.5" x2="-4" y2="9.7" stroke="#06080f" stroke-width="0.3"/>
+      <line x1="0" y1="7.5" x2="0" y2="9.7" stroke="#06080f" stroke-width="0.3"/>
+      <line x1="4" y1="7.5" x2="4" y2="9.7" stroke="#06080f" stroke-width="0.3"/>
+    </g>
+
+    <!-- Route Node 1: Logistics Supply Truck (Left) -->
+    <g transform="translate(22, 78)">
+      <!-- Wheels -->
+      <circle cx="2.5" cy="5.2" r="1" fill="#1b2e3d" stroke="#35e0ee" stroke-width="0.4"/>
+      <circle cx="7.5" cy="5.2" r="1" fill="#1b2e3d" stroke="#35e0ee" stroke-width="0.4"/>
+      <!-- Cargo Trailer -->
+      <rect x="0.5" y="0.8" width="6.5" height="3.8" fill="#ffffff" rx="0.3"/>
+      <!-- Green Route Readiness Mark -->
+      <rect x="1.5" y="1.8" width="3.5" height="1.2" fill="#2fe48a"/>
+      <!-- Truck Cab -->
+      <path d="M 7.2,2 L 9,2 L 10.2,3.5 L 10.2,4.8 L 7.2,4.8 Z" fill="#35e0ee"/>
+    </g>
+
+    <!-- Route Node 2: Supply Cargo Ship (Center) -->
+    <g transform="translate(48, 80)">
+      <!-- Ship Hull -->
+      <path d="M 1,4 L 12,4 L 10,7 L 3,7 Z" fill="#ffffff"/>
+      <!-- Bridge / Cabin -->
+      <rect x="8.5" y="1.5" width="2.2" height="2.5" fill="#35e0ee"/>
+      <!-- Cargo Containers -->
+      <rect x="2.5" y="2.2" width="2.5" height="1.8" fill="#2fe48a"/>
+      <rect x="5.3" y="2.2" width="2.5" height="1.8" fill="#35e0ee"/>
+    </g>
+
+    <!-- Route Node 3: Spaceport Launch Pad & Rocket (Right) -->
+    <g transform="translate(85, 54)">
+      <!-- Launch Tower / Service Gantry -->
+      <line x1="1.5" y1="12" x2="1.5" y2="28" stroke="#35e0ee" stroke-width="0.6"/>
+      <line x1="4" y1="14" x2="4" y2="28" stroke="#35e0ee" stroke-width="0.5"/>
+      <line x1="1.5" y1="16" x2="4" y2="16" stroke="#35e0ee" stroke-width="0.4"/>
+      <line x1="1.5" y1="20" x2="4" y2="20" stroke="#35e0ee" stroke-width="0.4"/>
+      <line x1="1.5" y1="24" x2="4" y2="24" stroke="#35e0ee" stroke-width="0.4"/>
+      <line x1="4" y1="15" x2="6" y2="15" stroke="#35e0ee" stroke-width="0.5"/>
+      <line x1="4" y1="21" x2="6" y2="21" stroke="#35e0ee" stroke-width="0.5"/>
+
+      <!-- Launch Platform Base -->
+      <rect x="-2" y="27" width="11" height="2" fill="#1b2e3d" stroke="#2fe48a" stroke-width="0.4" rx="0.3"/>
+
+      <!-- Rocket -->
+      <!-- Booster Body -->
+      <rect x="6.2" y="10" width="2.6" height="16" fill="#ffffff" rx="0.3"/>
+      <!-- Fairing / Nose Cone -->
+      <path d="M 6.2,10 Q 7.5,5.5 8.8,10 Z" fill="#ffffff"/>
+      <!-- Mission Stripes -->
+      <rect x="6.2" y="12" width="2.6" height="1.2" fill="#35e0ee"/>
+      <rect x="6.2" y="19" width="2.6" height="0.8" fill="#2fe48a"/>
+      <!-- Rocket Fins -->
+      <path d="M 6.2,23 L 4.8,26 L 6.2,26 Z" fill="#35e0ee"/>
+      <path d="M 8.8,23 L 10.2,26 L 8.8,26 Z" fill="#35e0ee"/>
+      <!-- Pad Beacon Glow -->
+      <circle cx="7.5" cy="5" r="0.6" fill="#2fe48a" filter="url(#glow)"/>
+    </g>
+  </g>
+
+  <!-- Patch Border Ring Dividers (Stars between text) -->
+  <g transform="translate(13.5, 60)">
+    <polygon points="0,-1.8 0.5,-0.5 1.8,0 0.5,0.5 0,1.8 -0.5,0.5 -1.8,0 -0.5,-0.5" fill="#2fe48a"/>
+  </g>
+  <g transform="translate(106.5, 60)">
+    <polygon points="0,-1.8 0.5,-0.5 1.8,0 0.5,0.5 0,1.8 -0.5,0.5 -1.8,0 -0.5,-0.5" fill="#2fe48a"/>
+  </g>
+
+  <!-- Mission Patch Typography -->
+  <!-- Top Arc: Team Name -->
+  <text fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="4.3" letter-spacing="0.75px">
+    <textPath href="#textArcTop" startOffset="50%" text-anchor="middle">
+      DANCING WITH THE SARS
+    </textPath>
+  </text>
+
+  <!-- Bottom Arc: Mission & Year -->
+  <text fill="#2fe48a" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="4.8" letter-spacing="1.4px">
+    <textPath href="#textArcBottom" startOffset="50%" text-anchor="middle">
+      SURE 2026
+    </textPath>
+  </text>
+</svg>
