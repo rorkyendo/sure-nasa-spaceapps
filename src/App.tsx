@@ -38,6 +38,12 @@ export default function App() {
                 </div>
                 <label className="tog"><input type="checkbox" id="togWet" defaultChecked /> Show wet-prone</label>
                 <label className="tog"><input type="checkbox" id="togRadar" defaultChecked /> <span id="radarLbl">Rain radar</span></label>
+                <div className="leg" id="bmap" role="group" aria-label="Basemap layer">
+                  <span>Map</span>
+                  <button className="bm on" data-b="sat" type="button">Satellite</button>
+                  <button className="bm" data-b="osm" type="button">OSM</button>
+                  <button className="bm" data-b="hyb" type="button">Hybrid</button>
+                </div>
               </div>
               <div className="stage" id="stage">
                 <canvas id="base" />
@@ -69,7 +75,7 @@ export default function App() {
                 </div>
                 <div className="hint2" id="hint2">Drag the truck or type a city · ○ airport · ◆ port</div>
                 <div className="scale" id="scale" />
-                <div className="credit">Roads, long-distance paths and radar values are simulated · rain radar: Meteomatics · imagery: Esri</div>
+                <div className="credit">Sea routes: water-graph A* on Natural Earth coast (not measured lanes) · waves: Open-Meteo Marine · roads: OSM·OSRM else simulated · radar values simulated · imagery: Esri · map: © OSM/CARTO</div>
                 <div className="coach" id="coach" aria-hidden="true">
                   <svg className="ctr"><line id="ctl" x1="0" y1="0" x2="0" y2="0" stroke="#35e0ee" strokeWidth="3" strokeDasharray="2 9" strokeLinecap="round" /></svg>
                   <div className="cr" id="ccr" />
@@ -143,6 +149,14 @@ export default function App() {
           <button className="btn" id="mmsave">Connect</button><button className="btn" id="mmoff">Disconnect</button>
         </div>
         <div className="hint" id="mmstat" style={{ marginTop: 8 }} />
+        <div className="eyebrow" style={{ marginTop: 16 }}>AI route assessment</div>
+        <div className="ttl" style={{ margin: '2px 0 0', fontSize: 15 }}>Model gateway</div>
+        <div className="hint" style={{ marginTop: 6 }}>Route stats, segment flags and live weather are sent to <code>model.cvmedandigitalinovasi.com</code> (OpenAI-compatible) for a risk assessment. Paste a Bearer key — it stays in this browser.</div>
+        <div className="row" style={{ marginTop: 8, flexWrap: 'wrap', gap: 6 }}>
+          <input type="password" id="aitok" placeholder="sk-… API key" autoComplete="off" style={{ flex: 1, minWidth: 220 }} />
+          <button className="btn" id="aisave">Connect</button><button className="btn" id="aioff">Disconnect</button>
+        </div>
+        <div className="hint" id="aistat" style={{ marginTop: 8 }} />
       </div></div>
 
       <div className="toast" id="toast" />

@@ -97,10 +97,20 @@ window.SUREDB = (() => {
       ? 'Login saved — live precipitation overlay is on.'
       : 'No login — the rain radar overlay stays off. The base satellite map and forecast still work.';
   }
+  /* --- AI gateway key (route assessment) --- */
+  const AIKEY = 'sure_ai_key_v1';
+  const aiGet = () => { try { return localStorage.getItem(AIKEY) || ''; } catch (e) { return ''; } };
+  const aiSet = v => { try { v ? localStorage.setItem(AIKEY, v) : localStorage.removeItem(AIKEY); } catch (e) {} };
+  function aiStat() {
+    const e = $id('aistat'); if (!e) return;
+    e.textContent = aiGet()
+      ? 'Key saved — every route update asks the model for a risk assessment.'
+      : 'No key — the AI assessment panel in Route options stays quiet.';
+  }
 
   function wire() {
     const mb = $id('dbmodal'), bb = $id('dbbtn'), tk = $id('dbtok');
-    if (bb) bb.addEventListener('click', () => { refreshStat(); mmStat(); mb.classList.add('on'); });
+    if (bb) bb.addEventListener('click', () => { refreshStat(); mmStat(); aiStat(); mb.classList.add('on'); });
     if ($id('dbclose')) $id('dbclose').addEventListener('click', () => mb.classList.remove('on'));
     if (mb) mb.addEventListener('click', e => { if (e.target === mb) mb.classList.remove('on'); });
     if ($id('dbsave')) $id('dbsave').addEventListener('click', () => {
@@ -116,6 +126,13 @@ window.SUREDB = (() => {
       mmSet(v); mk.value = ''; mmStat(); if (window.SUREMMCHANGE) window.SUREMMCHANGE();
     });
     if ($id('mmoff')) $id('mmoff').addEventListener('click', () => { mmSet(''); mmStat(); if (window.SUREMMCHANGE) window.SUREMMCHANGE(); });
+    const ak = $id('aitok');
+    if ($id('aisave')) $id('aisave').addEventListener('click', () => {
+      const v = (ak.value || '').trim();
+      if (!v) { const e = $id('aistat'); if (e) e.textContent = 'Paste an API key first.'; return; }
+      aiSet(v); ak.value = ''; aiStat();
+    });
+    if ($id('aioff')) $id('aioff').addEventListener('click', () => { aiSet(''); aiStat(); });
     paintBtn();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
