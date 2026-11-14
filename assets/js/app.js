@@ -541,6 +541,7 @@ function fitBounds(){
 }
 function flyTo(t,ms=900){
  t={...t,lon:S.view.lon+wrapL(t.lon-S.view.lon)};const v0={...S.view},d=Math.hypot(t.lon-v0.lon,t.lat-v0.lat),bump=Math.min(3.5,d/18),t0=performance.now();S.fly=true;
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches){S.view={...t,z:clampZ(t.z)};updView();drawBase();drawOverlay();hud();S.fly=false;return}
  const step=now=>{const k=Math.min(1,(now-t0)/ms),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
   S.view={lon:v0.lon+(t.lon-v0.lon)*e,lat:v0.lat+(t.lat-v0.lat)*e,z:clampZ(v0.z+(t.z-v0.z)*e-bump*Math.sin(Math.PI*k))};
   updView();drawBase();drawOverlay();hud();if(k<1)requestAnimationFrame(step);else S.fly=false};
