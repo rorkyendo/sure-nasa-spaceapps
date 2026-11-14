@@ -8,38 +8,95 @@ export default function App() {
   return (
     <>
       <Icons />
-      <div className="main">
-        <div className="top">
-          <div className="logo"><img src="assets/patch.svg" alt="SURE mission patch — Dancing with the SARs" /></div>
-          <div><h1>SURE</h1><div className="sub">Spaceport Supply Route Readiness</div></div>
-          <div className="sp" />
-          <span className="pill mono">SAT 14 NOV 2026</span>
-          <button className="btn" id="save">Save analysis</button>
-          <button className="btn" id="hist">History <span id="hn" className="pill" style={{ padding: '1px 7px' }}>0</span></button>
-          <button className="btn" id="dbbtn" title="Shared history stored in the GitHub repo">DB: local</button>
-          <button className="btn" id="reset">Reset</button>
-        </div>
+      <div className="shell">
+        <nav className="rail" aria-label="Tools">
+          <div className="rlogo" title="SURE — Spaceport Supply Route Readiness"><img src="assets/patch.svg" alt="SURE mission patch" /></div>
+          <span className="rbtn on" aria-current="page" title="Route map"><svg className="ri"><use href="#i-nav-map" /></svg><span className="rl">Map</span></span>
+          <button className="rbtn" id="save" type="button" title="Save analysis"><svg className="ri"><use href="#i-nav-save" /></svg><span className="rl">Save</span></button>
+          <button className="rbtn" id="hist" type="button" title="History"><svg className="ri"><use href="#i-nav-hist" /></svg><span className="rl">History</span><span id="hn">0</span></button>
+          <button className="rbtn" id="dbbtn" type="button" title="Shared history &amp; keys — local only"><svg className="ri"><use href="#i-nav-db" /></svg><span className="rl">Keys</span></button>
+          <div className="rsp" />
+          <button className="rbtn" id="reset" type="button" title="Reset"><svg className="ri"><use href="#i-nav-reset" /></svg><span className="rl">Reset</span></button>
+        </nav>
 
-        <div className="grid">
-          <div className="col">
+        <div className="main">
+          <header className="top">
+            <div><h1>SURE</h1><div className="sub">Spaceport Supply Route Readiness</div></div>
+            <div className="sp" />
+            <span className="pill mono" id="datePill">SAT 14 NOV 2026</span>
+          </header>
+
+          <div className="grid">
+            <div className="cl">
+              <div className="card mcard">
+                <div className="eyebrow">Mission</div>
+                <div className="fld"><div className="pills" id="pills" /></div>
+                <div className="fld">
+                  <label className="fl" htmlFor="pickText">Pickup point</label>
+                  <div className="dc truck" id="dragTruck" role="button" tabIndex={0} aria-label="Drag the truck onto the map">
+                    <svg id="dockTruck" viewBox="0 0 72 48"><use href="#i-truck-0" /></svg>
+                    <span><b>Drag onto the map</b><small>Drop anywhere on land</small></span>
+                  </div>
+                  <div className="prow">
+                    <input type="text" id="pickText" list="zones" placeholder="City, or lat, lon" autoComplete="off" />
+                    <button className="btn" id="pickGo" type="button">Go</button>
+                  </div>
+                  <div className="prow">
+                    <button className="btn ghostb" id="pickMap" type="button"><svg className="bi"><use href="#i-nav-pick" /></svg>Pick on map</button>
+                  </div>
+                  <datalist id="zones" />
+                </div>
+                <div className="fld">
+                  <label className="fl" htmlFor="cargo">Cargo</label>
+                  <select id="cargo">{CARGO.map((c: string) => <option key={c}>{c}</option>)}</select>
+                </div>
+              </div>
+
+              <div className="card fcard">
+                <div className="fhead">
+                  <div>
+                    <div className="eyebrow">Look ahead</div>
+                    <div className="ttl" id="fttl">Daily rain forecast</div>
+                  </div>
+                  <div className="segctl" id="modes">
+                    <button className="qc on" data-m="d" type="button">Daily · 8 days</button>
+                    <button className="qc" data-m="m" type="button">Monthly · 5 years</button>
+                  </div>
+                </div>
+                <div className="fgrid">
+                  <div>
+                    <div className="chips" id="qchips" />
+                    <input type="range" id="day" min={0} max={7} step={1} defaultValue={0} aria-label="Forecast date" />
+                    <svg className="rain" id="rain" viewBox="0 0 1000 120" aria-label="Daily rain forecast chart" />
+                  </div>
+                  <div>
+                    <div className="eyebrow" id="fsel">Selected day</div>
+                    <div className="fday mono" id="fday">-</div>
+                    <div id="fread" />
+                    <div className="panelnote" id="fnote" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="card mapcard">
               <div className="maphead">
                 <div>
                   <div className="eyebrow" id="mapEyebrow">Route</div>
-                  <div className="ttl" id="mapTitle" style={{ margin: '2px 0 0' }}>Route</div>
+                  <div className="ttl" id="mapTitle">Route</div>
                 </div>
-                <div className="sp" />
-                <div className="pills" id="pills" style={{ padding: 0 }} />
+              </div>
+              <div className="mtools">
                 <div className="leg">
                   <span><i style={{ background: 'var(--g)' }} />Green</span>
                   <span><i style={{ background: 'var(--y)' }} />Yellow</span>
                   <span><i style={{ background: 'var(--r)' }} />Red</span>
-                  <span><i style={{ background: '#5aa8ff' }} />Wet-prone</span>
+                  <span><i style={{ background: 'var(--bl)' }} />Wet-prone</span>
                 </div>
-                <label className="tog"><input type="checkbox" id="togWet" defaultChecked /> Show wet-prone</label>
+                <label className="tog"><input type="checkbox" id="togWet" defaultChecked /> Wet-prone</label>
                 <label className="tog"><input type="checkbox" id="togRadar" defaultChecked /> <span id="radarLbl">Rain radar</span></label>
-                <div className="leg" id="bmap" role="group" aria-label="Basemap layer">
-                  <span>Map</span>
+                <div className="sp" />
+                <div className="leg segctl" id="bmap" role="group" aria-label="Basemap layer">
                   <button className="bm on" data-b="sat" type="button">Satellite</button>
                   <button className="bm" data-b="osm" type="button">OSM</button>
                   <button className="bm" data-b="hyb" type="button">Hybrid</button>
@@ -49,23 +106,6 @@ export default function App() {
                 <canvas id="base" />
                 <svg className="ov" id="ov" />
                 <div className="rainov" id="rainov" />
-                <div className="dock">
-                  <div className="dc truck" id="dragTruck" role="button" tabIndex={0} aria-label="Drag the truck onto the map">
-                    <svg id="dockTruck" viewBox="0 0 72 48"><use href="#i-truck-0" /></svg>
-                    <span><b>Pickup point</b><small>Drag it anywhere on land</small></span>
-                  </div>
-                  <div className="cargo"><label htmlFor="cargo">Cargo</label>
-                    <select id="cargo">{CARGO.map((c: string) => <option key={c}>{c}</option>)}</select>
-                  </div>
-                  <div className="cargo" id="pickbox"><label htmlFor="pickText">Pickup point</label>
-                    <div className="row" style={{ gap: 6 }}>
-                      <input type="text" id="pickText" list="zones" placeholder="City, or lat, lon" autoComplete="off" />
-                      <button className="btn" id="pickGo" type="button">Go</button>
-                      <button className="btn" id="pickMap" type="button">Pick on map</button>
-                    </div>
-                    <datalist id="zones" />
-                  </div>
-                </div>
                 <div className="zoomc">
                   <button className="zb" id="zin" aria-label="Zoom in">+</button>
                   <button className="zb" id="zout" aria-label="Zoom out">−</button>
@@ -86,37 +126,11 @@ export default function App() {
               </div>
             </div>
 
-            <div className="card">
-              <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                <div>
-                  <div className="eyebrow">Look ahead</div>
-                  <div className="ttl" id="fttl" style={{ marginBottom: 6 }}>Daily rain forecast</div>
-                </div>
-                <div className="chips" id="modes" style={{ margin: 0 }}>
-                  <button className="qc on" data-m="d">Daily · 8 days</button>
-                  <button className="qc" data-m="m">Monthly · 5 years</button>
-                </div>
-              </div>
-              <div className="fgrid">
-                <div>
-                  <div className="chips" id="qchips" />
-                  <input type="range" id="day" min={0} max={7} step={1} defaultValue={0} aria-label="Forecast date" />
-                  <svg className="rain" id="rain" viewBox="0 0 1000 120" aria-label="Daily rain forecast chart" />
-                </div>
-                <div>
-                  <div className="eyebrow" id="fsel">Selected day</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, margin: '4px 0' }} id="fday">-</div>
-                  <div id="fread" />
-                  <div className="panelnote" id="fnote" />
-                </div>
-              </div>
+            <div className="rin">
+              <div className="card" id="routes" />
+              <div className="card" id="detail" />
             </div>
           </div>
-
-          <div className="col r"><div className="rin">
-            <div className="card" id="routes" />
-            <div className="card" id="detail" />
-          </div></div>
         </div>
       </div>
 

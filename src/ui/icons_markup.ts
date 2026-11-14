@@ -1,44 +1,54 @@
 export const ICONS_SVG=`<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-<defs>
-<linearGradient id="gBody" x1="0" x2="1"><stop offset="0" stop-color="#9aa8c2"/><stop offset=".32" stop-color="#ffffff"/><stop offset=".7" stop-color="#c3cde0"/><stop offset="1" stop-color="#5f6d8b"/></linearGradient>
-<linearGradient id="gNose" x1="0" x2="1"><stop offset="0" stop-color="#ff9a8a"/><stop offset=".42" stop-color="#ff4d5e"/><stop offset="1" stop-color="#8f1530"/></linearGradient>
-<linearGradient id="gFinL" x1="0" x2="1"><stop offset="0" stop-color="#ff7a86"/><stop offset="1" stop-color="#c0243c"/></linearGradient>
-<linearGradient id="gFinR" x1="0" x2="1"><stop offset="0" stop-color="#d12c45"/><stop offset="1" stop-color="#7d1128"/></linearGradient>
-<radialGradient id="gGlass" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#e2fcff"/><stop offset=".5" stop-color="#4cc3e8"/><stop offset="1" stop-color="#14507f"/></radialGradient>
-<linearGradient id="gFlame" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6b0"/><stop offset=".45" stop-color="#ffb23e"/><stop offset="1" stop-color="#ff4d5e" stop-opacity="0"/></linearGradient>
-<linearGradient id="gCyl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#d5ddec"/><stop offset="1" stop-color="#66748f"/></linearGradient>
-<linearGradient id="gCab" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd38a"/><stop offset=".5" stop-color="#ff9a2e"/><stop offset="1" stop-color="#a95a10"/></linearGradient>
-<linearGradient id="gDeck" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6d7fa3"/><stop offset="1" stop-color="#2b3658"/></linearGradient>
-<radialGradient id="gHub" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#7b88a3"/></radialGradient>
-<radialGradient id="gTire" cx=".5" cy=".5" r=".5"><stop offset=".55" stop-color="#1c2338"/><stop offset="1" stop-color="#05070f"/></radialGradient>
-</defs>
-<symbol id="i-rocket3d" viewBox="0 0 64 64"><g transform="rotate(28 32 34) translate(0 2)">
-<ellipse cx="32" cy="60" rx="14" ry="3" fill="#000" opacity=".25"/>
-<path d="M32 60c-3-4-4-8-4-11h8c0 3-1 7-4 11z" fill="url(#gFlame)"/>
-<path d="M22 36L10 52v6l12-6z" fill="url(#gFinL)"/><path d="M42 36l12 16v6l-12-6z" fill="url(#gFinR)"/>
-<path d="M32 4c6 5 10 13 10 24v18H22V28C22 17 26 9 32 4z" fill="url(#gBody)"/>
-<path d="M32 4c4 3.500 7 8 8.500 14h-17C25 12 28 7.500 32 4z" fill="url(#gNose)"/>
-<rect x="22" y="38" width="20" height="3.500" fill="url(#gNose)"/>
-<circle cx="32" cy="29" r="5.600" fill="#6f7d99"/><circle cx="32" cy="29" r="4.400" fill="url(#gGlass)"/>
-<path d="M25 24c0-6 3-12 6-17" stroke="#fff" stroke-opacity=".7" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-<path d="M26 46h12l-2 5h-8z" fill="#4a566f"/></g></symbol><symbol id="i-rocket-nf" viewBox="0 0 64 64"><g transform="rotate(28 32 34) translate(0 2)">
-<path d="M22 36L10 52v6l12-6z" fill="url(#gFinL)"/><path d="M42 36l12 16v6l-12-6z" fill="url(#gFinR)"/>
-<path d="M32 4c6 5 10 13 10 24v18H22V28C22 17 26 9 32 4z" fill="url(#gBody)"/>
-<path d="M32 4c4 3.500 7 8 8.500 14h-17C25 12 28 7.500 32 4z" fill="url(#gNose)"/>
-<rect x="22" y="38" width="20" height="3.500" fill="url(#gNose)"/>
-<circle cx="32" cy="29" r="5.600" fill="#6f7d99"/><circle cx="32" cy="29" r="4.400" fill="url(#gGlass)"/>
-<path d="M25 24c0-6 3-12 6-17" stroke="#fff" stroke-opacity=".7" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-<path d="M26 46h12l-2 5h-8z" fill="#4a566f"/></g></symbol>
+<symbol id="i-rocket3d" viewBox="0 0 64 64"><g transform="rotate(28 32 32)">
+<path d="M32 58c-2.5-3.5-3.5-6.5-3.5-9h7c0 2.5-1 5.5-3.5 9z" fill="#ff9a2e"/>
+<path d="M24 34 13 49v5l11-5z" fill="#c02a42"/><path d="M40 34l11 15v5l-11-5z" fill="#8f1530"/>
+<path d="M32 5c5.5 4.5 9 12 9 22v17H23V27c0-10 3.5-17.5 9-22z" fill="#dfe6f4"/>
+<path d="M32 5c3.8 3.2 6.7 7.6 8 13H24c1.3-5.4 4.2-9.8 8-13z" fill="#ff4d5e"/>
+<rect x="23" y="36" width="18" height="3" fill="#ff4d5e"/>
+<circle cx="32" cy="27" r="4.6" fill="#16203a"/><circle cx="32" cy="27" r="3" fill="#35e0ee"/>
+<path d="M26 44h12l-1.8 4h-8.4z" fill="#8fa3cc"/></g></symbol>
+<symbol id="i-rocket-nf" viewBox="0 0 64 64"><g transform="rotate(28 32 32)">
+<path d="M24 34 13 49v5l11-5z" fill="#c02a42"/><path d="M40 34l11 15v5l-11-5z" fill="#8f1530"/>
+<path d="M32 5c5.5 4.5 9 12 9 22v17H23V27c0-10 3.5-17.5 9-22z" fill="#dfe6f4"/>
+<path d="M32 5c3.8 3.2 6.7 7.6 8 13H24c1.3-5.4 4.2-9.8 8-13z" fill="#ff4d5e"/>
+<rect x="23" y="36" width="18" height="3" fill="#ff4d5e"/>
+<circle cx="32" cy="27" r="4.6" fill="#16203a"/><circle cx="32" cy="27" r="3" fill="#35e0ee"/>
+<path d="M26 44h12l-1.8 4h-8.4z" fill="#8fa3cc"/></g></symbol>
 <symbol id="i-truckbase" viewBox="0 0 72 48">
-<ellipse cx="36" cy="43.500" rx="31" ry="3.500" fill="#000" opacity=".3"/>
-<path d="M5 28l5-4h37l-5 4z" fill="#8fa0bf"/><rect x="5" y="28" width="37" height="5" fill="url(#gDeck)"/>
-<path d="M44 33V19h10l9 8v6z" fill="url(#gCab)"/><path d="M47 21.500h6l6 5.500H47z" fill="url(#gGlass)"/>
-<rect x="62" y="30" width="4" height="3" rx="1" fill="#59647f"/><rect x="62.500" y="28" width="3" height="1.800" fill="#fff6b0"/>
-<rect x="5" y="33" width="58" height="3.500" fill="#222b47"/>
-<g><circle cx="14" cy="37" r="6.200" fill="url(#gTire)"/><circle cx="14" cy="37" r="2.600" fill="url(#gHub)"/>
-<circle cx="25" cy="37" r="6.200" fill="url(#gTire)"/><circle cx="25" cy="37" r="2.600" fill="url(#gHub)"/>
-<circle cx="53" cy="37" r="6.200" fill="url(#gTire)"/><circle cx="53" cy="37" r="2.600" fill="url(#gHub)"/></g></symbol><symbol id="i-truck-0" viewBox="0 0 72 48"><use href="#i-truckbase" width="72" height="48"/><rect x="9" y="12" width="33" height="14" rx="2" fill="url(#gCyl)"/><ellipse cx="42" cy="19" rx="3" ry="7" fill="#eef2fa"/><rect x="18" y="12" width="3.500" height="14" fill="#ff4d5e"/><rect x="29" y="12" width="3.500" height="14" fill="#ff4d5e"/><path d="M9 15l-4 1v6l4 1z" fill="#4a566f"/><rect x="9" y="12" width="33" height="3" rx="1.500" fill="#fff" opacity=".5"/></symbol><symbol id="i-truck-1" viewBox="0 0 72 48"><use href="#i-truckbase" width="72" height="48"/><rect x="15" y="14" width="24" height="12" rx="2" fill="url(#gCyl)"/><ellipse cx="39" cy="20" rx="2.600" ry="6" fill="#eef2fa"/><rect x="24" y="14" width="3" height="12" fill="#35b8d8"/><path d="M15 17l-6 -1v8l6-1z" fill="#3a4560"/><path d="M9 16l-2 -1v10l2-1z" fill="#1b2238"/><rect x="15" y="14" width="24" height="3" rx="1.500" fill="#fff" opacity=".5"/></symbol><symbol id="i-truck-2" viewBox="0 0 72 48"><use href="#i-truckbase" width="72" height="48"/><path d="M8 26V19C8 14 16 11 28 11c8 0 13 6 15 15z" fill="url(#gCyl)"/><path d="M8 26h35l-1-3H8z" fill="#ff9a2e"/><path d="M12 19c4-4 12-6 20-5" stroke="#fff" stroke-width="1.500" fill="none" opacity=".8"/><path d="M28 11v15" stroke="#7b88a3" stroke-width="1"/></symbol><symbol id="i-truck-3" viewBox="0 0 72 48"><use href="#i-truckbase" width="72" height="48"/><rect x="19" y="13" width="14" height="13" rx="1.500" fill="#ffd15a"/><rect x="19" y="13" width="14" height="4" fill="#fff0b0"/><rect x="21" y="19" width="10" height="5" fill="#c98f1a"/><rect x="5" y="15" width="12" height="9" fill="#2d6fd6"/><rect x="35" y="15" width="12" height="9" fill="#2d6fd6"/><path d="M8 15v9M11 15v9M14 15v9M38 15v9M41 15v9M44 15v9" stroke="#9ec9ff" stroke-width=".7"/><path d="M26 13v-5" stroke="#d6dff0" stroke-width="1.200"/><circle cx="26" cy="7" r="2.200" fill="#eef2fa"/></symbol><symbol id="i-truck-4" viewBox="0 0 72 48"><use href="#i-truckbase" width="72" height="48"/><rect x="7" y="23" width="36" height="4" fill="#8b5a2b"/><g fill="url(#gCyl)"><path d="M11 23l3-12h6l3 12z"/><path d="M21 23l3-12h6l3 12z"/><path d="M31 23l3-12h6l3 12z"/></g><g fill="#2b3350"><ellipse cx="17" cy="11" rx="3" ry="1.200"/><ellipse cx="27" cy="11" rx="3" ry="1.200"/><ellipse cx="37" cy="11" rx="3" ry="1.200"/></g></symbol><symbol id="i-truck-5" viewBox="0 0 72 48"><use href="#i-truckbase" width="72" height="48"/><rect x="8" y="11" width="35" height="16" rx="8" fill="url(#gCyl)"/><rect x="21" y="11" width="9" height="16" fill="#35b8d8" opacity=".85"/><rect x="8" y="11" width="35" height="4" rx="2" fill="#fff" opacity=".5"/><rect x="24" y="8" width="4" height="3.500" fill="#59647f"/><circle cx="26" cy="8" r="1.800" fill="#ff4d5e"/></symbol><symbol id="i-truck-6" viewBox="0 0 72 48"><use href="#i-truckbase" width="72" height="48"/><rect x="8" y="12" width="34" height="14" rx="2" fill="#7a8399"/><rect x="8" y="12" width="34" height="4" rx="2" fill="#c3cde0"/><path d="M17 12v14M26 12v14M35 12v14" stroke="#2b3350" stroke-width="1.600"/><path d="M42 14l5 2v6l-5 2z" fill="#3a4560"/><rect x="8" y="12" width="3" height="14" fill="#ff4d5e"/></symbol><symbol id="i-truck-7" viewBox="0 0 72 48"><use href="#i-truckbase" width="72" height="48"/><rect x="9" y="14" width="22" height="12" rx="1.500" fill="#ff9a2e"/><rect x="9" y="14" width="22" height="3" fill="#ffd38a"/><path d="M12 14l6 12M24 14l6 12" stroke="#a95a10" stroke-width="1.200"/><path d="M31 18h9v-8h4" stroke="#c3cde0" stroke-width="2.600" fill="none"/><rect x="42" y="8" width="5" height="4" fill="#ff4d5e"/><rect x="34" y="21" width="9" height="5" fill="#59647f"/></symbol>
-<symbol id="i-ship" viewBox="0 0 72 48"><ellipse cx="36" cy="43" rx="31" ry="3.500" fill="#000" opacity=".25"/><path d="M4 30h64l-8 12H14z" fill="#2c3a5c" stroke="#8fa3cc" stroke-width="1"/><path d="M4 30h64l-1.600 2.400H5.600z" fill="#e0533d"/><rect x="14" y="21" width="9" height="9" fill="#c9d3ea"/><rect x="24" y="21" width="9" height="9" fill="#35e0ee"/><rect x="34" y="21" width="9" height="9" fill="#c9d3ea"/><rect x="49" y="14" width="12" height="16" fill="#e8edf8"/><rect x="51" y="17" width="8" height="3" fill="#2a3a60"/><rect x="54" y="8" width="3" height="6" fill="#8996b6"/></symbol>
-<symbol id="i-plane" viewBox="0 0 72 48"><ellipse cx="36" cy="44" rx="22" ry="2.500" fill="#000" opacity=".25"/><path d="M8 24c0-6 6-10 16-11h22c10 0 20 4 22 11-2 7-12 10-22 10H24C14 34 8 30 8 24z" fill="#e8edf8" stroke="#8fa3cc"/><path d="M10 22L4 6h9l10 16z" fill="#35e0ee"/><path d="M30 30l14 14h-9L22 30z" fill="#c9d3ea" stroke="#8fa3cc" stroke-width=".8"/><rect x="48" y="19" width="14" height="4" rx="2" fill="#2a3a60"/><circle cx="36" cy="37" r="3" fill="#5a6a8a"/></symbol>
-<symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3c3.500 4.500 6 7.500 6 11a6 6 0 0 1-12 0c0-3.500 2.500-6.500 6-11z" fill="currentColor"/></symbol>
+<rect x="5" y="27" width="39" height="5" fill="#3a4a72"/>
+<path d="M44 32V20h9l9 8v4z" fill="#35e0ee"/><path d="M47 22h5.4l5.5 5H47z" fill="#0d1730"/>
+<rect x="5" y="32" width="57" height="3" fill="#16203a"/>
+<g fill="#0b1020"><circle cx="13" cy="37" r="5.4"/><circle cx="24" cy="37" r="5.4"/><circle cx="52" cy="37" r="5.4"/></g>
+<g fill="#8fa3cc"><circle cx="13" cy="37" r="2.2"/><circle cx="24" cy="37" r="2.2"/><circle cx="52" cy="37" r="2.2"/></g></symbol>
+<symbol id="i-truck-0" viewBox="0 0 72 48"><use href="#i-truckbase"/>
+<rect x="8" y="12" width="34" height="13" rx="2" fill="#dfe6f4"/><rect x="16" y="12" width="3" height="13" fill="#ff4d5e"/><rect x="27" y="12" width="3" height="13" fill="#ff4d5e"/><path d="M8 12l-4 2v9l4 2z" fill="#8fa3cc"/></symbol>
+<symbol id="i-truck-1" viewBox="0 0 72 48"><use href="#i-truckbase"/>
+<rect x="14" y="14" width="26" height="11" rx="2" fill="#dfe6f4"/><rect x="24" y="14" width="3" height="11" fill="#35b8d8"/><path d="M14 14l-5 1v10l5 1z" fill="#8fa3cc"/></symbol>
+<symbol id="i-truck-2" viewBox="0 0 72 48"><use href="#i-truckbase"/>
+<path d="M8 26v-7c0-4.5 7-7 16-7 8 0 13.6 5.5 15 14z" fill="#dfe6f4"/><path d="M8 26h31l-.8-3H8z" fill="#ff9a2e"/></symbol>
+<symbol id="i-truck-3" viewBox="0 0 72 48"><use href="#i-truckbase"/>
+<rect x="5" y="16" width="12" height="8" fill="#2d6fd6"/><rect x="33" y="16" width="11" height="8" fill="#2d6fd6"/>
+<rect x="19" y="13" width="12" height="13" rx="1.5" fill="#ffd15a"/><rect x="22" y="19" width="6" height="4" fill="#c98f1a"/><circle cx="25" cy="9" r="2" fill="#dfe6f4"/><path d="M25 13V9" stroke="#dfe6f4" stroke-width="1.2"/></symbol>
+<symbol id="i-truck-4" viewBox="0 0 72 48"><use href="#i-truckbase"/>
+<rect x="7" y="23" width="35" height="4" fill="#8b5a2b"/><g fill="#dfe6f4"><path d="M11 23l3-12h6l3 12z"/><path d="M21 23l3-12h6l3 12z"/><path d="M31 23l3-12h6l3 12z"/></g><g fill="#2b3350"><ellipse cx="17" cy="11" rx="3" ry="1.2"/><ellipse cx="27" cy="11" rx="3" ry="1.2"/><ellipse cx="37" cy="11" rx="3" ry="1.2"/></g></symbol>
+<symbol id="i-truck-5" viewBox="0 0 72 48"><use href="#i-truckbase"/>
+<rect x="8" y="11" width="35" height="15" rx="7.5" fill="#dfe6f4"/><rect x="21" y="11" width="9" height="15" fill="#35b8d8"/><rect x="24" y="7" width="4" height="4" fill="#8fa3cc"/><circle cx="26" cy="6.5" r="1.8" fill="#ff4d5e"/></symbol>
+<symbol id="i-truck-6" viewBox="0 0 72 48"><use href="#i-truckbase"/>
+<rect x="8" y="12" width="34" height="14" rx="2" fill="#8fa3cc"/><path d="M17 12v14M26 12v14M35 12v14" stroke="#2b3350" stroke-width="1.6"/><rect x="8" y="12" width="3" height="14" fill="#ff4d5e"/></symbol>
+<symbol id="i-truck-7" viewBox="0 0 72 48"><use href="#i-truckbase"/>
+<rect x="9" y="14" width="22" height="12" rx="1.5" fill="#c98f1a"/><path d="M14 14v12M20 14v12M26 14v12" stroke="#8a6210" stroke-width="1.4"/><rect x="33" y="17" width="8" height="9" fill="#2d6fd6"/></symbol>
+<symbol id="i-ship" viewBox="0 0 72 48"><path d="M4 30h64l-8 12H14z" fill="#2b3a60"/><path d="M4 30h64l-1.6 2.5H5.6z" fill="#e0533d"/>
+<rect x="14" y="22" width="9" height="8" fill="#8fa3cc"/><rect x="24" y="22" width="9" height="8" fill="#35e0ee"/><rect x="34" y="22" width="9" height="8" fill="#8fa3cc"/>
+<rect x="49" y="15" width="11" height="15" fill="#dfe6f4"/><rect x="51" y="18" width="7" height="3" fill="#16203a"/><rect x="53" y="9" width="3" height="6" fill="#8fa3cc"/></symbol>
+<symbol id="i-plane" viewBox="0 0 72 48"><path d="M8 24c0-6 6-10 16-11h22c10 0 20 4 22 11-2 7-12 10-22 10H24c-10 0-16-4-16-10z" fill="#dfe6f4"/><path d="M10 22 4 7h8l11 15z" fill="#35e0ee"/><path d="M30 31l13 13h-8L22 31z" fill="#8fa3cc"/><rect x="48" y="19" width="13" height="4" rx="2" fill="#16203a"/></symbol>
+<symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3c3.5 4.5 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 2.5-6.5 6-11z" fill="currentColor"/></symbol>
+<symbol id="i-m-land" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M2 15V8h11v7"/><path d="M13 11h5l3 3v3h-8"/><circle cx="6.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/></g></symbol>
+<symbol id="i-m-sea" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M3 14h18l-2.5 4h-13z"/><path d="M7 14v-4h4v4M15 14V8h3v6"/><path d="M4 20c1.5-1.4 3-1.4 4.5 0s3 1.4 4.5 0 3-1.4 4.5 0"/></g></symbol>
+<symbol id="i-m-air" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M3 12c0-1.4 1.6-2.6 4-3l10-2.5c2.6-.6 4 0 4 1.5s-1.4 2.8-4 3.2L8 13.5C5 14 3 13.4 3 12z"/><path d="M7 13 4 19h3l4-6"/><path d="M13 9.5 9 4.5H7L5 9.5"/></g></symbol>
+<symbol id="i-nav-map" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M6 8.5a4.4 4.4 0 0 1 8.8 0c0 3-4.4 7.5-4.4 7.5S6 11.5 6 8.5z"/><circle cx="10.4" cy="8.5" r="1.6"/><path d="M3 13l4.5 8h13L17 15.5"/></g></symbol>
+<symbol id="i-nav-save" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3"/><path d="M8 14h8v7H8z"/></g></symbol>
+<symbol id="i-nav-hist" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.5l3.5 2"/></g></symbol>
+<symbol id="i-nav-db" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5V12c0 1.7 3.6 3 8 3s8-1.3 8-3V5.5"/><path d="M4 12v6.5c0 1.7 3.6 3 8 3s8-1.3 8-3V12"/></g></symbol>
+<symbol id="i-nav-reset" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v6h6"/><path d="M4.7 11a8.5 8.5 0 1 1 .8 5"/></g></symbol>
+<symbol id="i-nav-pick" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v18"/><path d="M7 4h10l-3 4 3 4H7"/></g></symbol>
 </svg>`;

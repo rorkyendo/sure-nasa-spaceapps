@@ -79,7 +79,7 @@ window.SUREDB = (() => {
 
   /* --- connect UI --- */
   const $id = s => document.getElementById(s);
-  function paintBtn() { const b = $id('dbbtn'); if (b) b.textContent = 'DB: ' + (enabled() ? 'shared' : 'local'); }
+  function paintBtn() { const b = $id('dbbtn'); if (b) { b.classList.toggle('conn', enabled()); b.title = 'Shared history & keys — ' + (enabled() ? 'connected' : 'local only'); } }
   function stat(t, bad) { const e = $id('dbstat'); if (e) { e.textContent = t; e.style.color = bad ? '#ff9aa6' : ''; } }
   async function refreshStat() {
     if (!enabled()) { stat('Mode: history is kept in this browser only.'); paintBtn(); return; }

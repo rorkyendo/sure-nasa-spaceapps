@@ -1,52 +1,21 @@
-/* SURE engine - ported from the original vanilla mockup.
-   Imperative map renderer (canvas tiles + SVG overlay) + all route/radar
-   computation. React mounts the DOM shell with the same element ids, then
-   calls mount() once. Panels are still engine-rendered into those ids. */
+/* SURE engine — orchestrator: canvas map, SVG overlay, panels, pointer, mount.
+   Domain logic lives in ./util ./data ./state ./geo ./routes ./ai */
 import './geo-data.js';
-const GEO=window.GEO;
-const listeners=new Set();
-export function sub(fn){listeners.add(fn);return()=>listeners.delete(fn)}
-let _v=0;export function ver(){return _v}
-export function emit(){_v++;listeners.forEach(f=>f())}
-"use strict";
-const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-const COL={g:'#2fe48a',y:'#ffd23f',r:'#ff4d5e'},LBL={g:'GREEN',y:'YELLOW',r:'RED'},RANK={g:0,y:1,r:2};
-const f1=n=>n.toFixed(1),fe=n=>n>=100?Math.round(n).toLocaleString('en-US'):n.toFixed(1);
-const fmtT=(h,c)=>{const m=Math.round(h*60),U=c?['m','h','d']:['min','h','d'],sp=c?'':' ';if(m<60)return Math.max(1,m)+sp+U[0];if(m<2880){const hh=Math.floor(m/60),mm=m%60;return hh+sp+U[1]+(mm?' '+mm+sp+U[0]:'')}const d=Math.floor(m/1440),hh=Math.round((m%1440)/60);return d+sp+U[2]+(hh?' '+hh+sp+U[1]:'')};
-function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-const SP=[
-{id:'ksc',name:'Cape Canaveral',ctry:'USA',lat:28.52,lon:-80.68,preset:true,clim:1.1,gunw:true,seed:11},
-{id:'biak',name:'Biak',ctry:'Indonesia',lat:-1.19,lon:136.1,preset:false,clim:1.7,gunw:true,seed:53}];
-const H=(i,j,s)=>{let h=Math.imul(i|0,374761393)^Math.imul(j|0,668265263)^Math.imul(s|0,2246822519);h=Math.imul(h^h>>>13,1274126177);h^=h>>>16;return(h>>>0)/4294967296};
-const VN=(x,y,s,cell=1.4)=>{const gx=x/cell,gy=y/cell,i=Math.floor(gx),j=Math.floor(gy),fx=gx-i,fy=gy-j,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy),a=H(i,j,s),b=H(i+1,j,s),c=H(i,j+1,s),d=H(i+1,j+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v};
-const W={sat:1,rain:6,red:4},rl=v=>v<30?0:v<50?.5:1;
+import{sub,ver,emit,S}from'./state.js';
+import{$,$$,COL,LBL,RANK,f1,fe,fmtT,rng,H,VN,W,rl,st1,st2,st8,stv1,worst,risk,hv,RAD,toV,fromV,vcross,vdot,hav,unw,wrapL,mer,merYinv,MONn,monthLabel}from'./util.js';
+import{SP,CARGO,PICKS,DATES,DAYS,DSH,setDayLabels,AIRPORTS,PORTS,ALLT,TERM,DOC,VREF,MODEL,MORD,MODEV,SEAVIA,SEACCESS,PARTS,PEAK,OPS,OPQ,TILESETS,HK,DIRS}from'./data.js';
+import{L110,L50,L10,relPad,isLandIn,isLand,isLand10,landId,seaMask,fineMask,mkWaterFast,segWater,waterFrac,chaikinW,seaGraph,seaAStar,seaPaths,waterReady,gcPts,chaikin,viaPoly,arcPoly,polyKm,landFrac,unwrapBack,modeBlobs}from'./geo.js';
+import{legPolys,legSegs,mkLegSet,legAcc,legBest,legRec,mkModeRoute,modeAlts,applyWeather,worstTxt,fetchSeaWx,seaWxAt}from'./routes.js';
+import{queueAI,routeSrcTag,bindAI}from'./ai.js';
 const TS=()=>'i-truck-'+Math.max(0,CARGO.indexOf(S.cargo));
-const CARGO=['First-stage booster','Second stage','Payload fairing','Satellite or payload','Rocket engines','Propellant (liquid oxygen, fuel)','Solid rocket motor','Ground support equipment'];
-let DAYS=['Sat 14 Nov','Sun 15 Nov','Mon 16 Nov','Tue 17 Nov','Wed 18 Nov','Thu 19 Nov','Fri 20 Nov','Sat 21 Nov'];
-let DSH=['Sat 14','Sun 15','Mon 16','Tue 17','Wed 18','Thu 19','Fri 20','Sat 21'];
-const DATES=['3 Sep','15 Sep','27 Sep','9 Oct','21 Oct','2 Nov'];
-const st1=v=>v<3?'g':v<6?'y':'r',st2=v=>{const a=Math.abs(v);return a<5?'g':a<=15?'y':'r'},st8=v=>v<30?'g':v<50?'y':'r',stv1=v=>v>70?'g':v>=50?'y':'r';
-const worst=(a,b)=>RANK[a]>=RANK[b]?a:b,risk=s=>({g:0,y:.29,r:.53}[s]);
 
 /* ---------- coastline data ---------- */
-function b64bytes(s){const bin=atob(s),n=bin.length,u=new Uint8Array(n);for(let i=0;i<n;i++)u[i]=bin.charCodeAt(i);return u}
-function decodeLand(s,q){const u=b64bytes(s);let p=0;const vi=()=>{let r=0,m=1,b;do{b=u[p++];r+=(b&127)*m;m*=128}while(b&128);return r%2?-(r+1)/2:r/2};
- const nr=vi(),rings=[];
- for(let i=0;i<nr;i++){const n=vi(),lon=new Float32Array(n),lat=new Float32Array(n),mx=new Float32Array(n),my=new Float32Array(n);let a=0,b=0,x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
-  for(let j=0;j<n;j++){a+=vi();b+=vi();const lo=a/q,la=b/q;lon[j]=lo;lat[j]=la;mx[j]=(lo+180)/360;const l=Math.max(-85.0511,Math.min(85.0511,la)),sn=Math.sin(l*Math.PI/180);my[j]=.5-Math.log((1+sn)/(1-sn))/(4*Math.PI);if(lo<x0)x0=lo;if(lo>x1)x1=lo;if(la<y0)y0=la;if(la>y1)y1=la}
-  rings.push({lon,lat,mx,my,b:[x0,y0,x1,y1]})}
- return rings}
-const L110=decodeLand(GEO.L110,100),L50=decodeLand(GEO.L50,1000),L10=decodeLand(GEO.L10,10000);
 
 /* ---------- state ---------- */
-const S={sp:null,net:null,origin:null,wp:null,cargo:CARGO[0],segs:[],len:0,sel:null,day:0,mode:'d',rain:null,rainBase:null,rainSrc:'sim',w:900,h:600,dpr:1,view:{lon:-80.68,lat:28.52,z:10},snap:null,hotSp:null,fly:null,nets:{},routeMid:null,routes:[],ri:0,rec:0,pinned:false,pickMode:false,far:null,farBlobs:null};
 let stage,cv,ov;
-const mer=(lon,lat)=>{const l=Math.max(-85.0511,Math.min(85.0511,lat)),sn=Math.sin(l*Math.PI/180);return[(lon+180)/360,.5-Math.log((1+sn)/(1-sn))/(4*Math.PI)]};
 const ws=()=>256*Math.pow(2,S.view.z);
 const GR=()=>ws()/(2*Math.PI);
-const wrapL=d=>((d+540)%360+360)%360-180;
 function updView(){S.R=GR();S.cx=S.w/2;S.cy=S.h/2;S.mv=mer(S.view.lon,S.view.lat)}
-const merYinv=y=>{const s=Math.tanh(Math.PI*(1-2*Math.max(0,Math.min(1,y))));return Math.asin(Math.max(-1,Math.min(1,s)))*180/Math.PI};
 function P(lon,lat){const m=mer(lon,lat);let dx=m[0]-S.mv[0];dx-=Math.round(dx);return[S.cx+dx*ws(),S.cy+(m[1]-S.mv[1])*ws(),1]}
 function U(px,py){const y=S.mv[1]+(py-S.cy)/ws(),lon=(S.mv[0]+(px-S.cx)/ws())*360-180;return[S.view.lon+wrapL(lon-S.view.lon),merYinv(y)]}
 function ringV(r){if(r.v)return r.v;const n=r.lon.length,v=new Float32Array(n*3);for(let j=0;j<n;j++){const a=r.lon[j]*Math.PI/180,b=r.lat[j]*Math.PI/180,cb=Math.cos(b);v[j*3]=cb*Math.cos(a);v[j*3+1]=cb*Math.sin(a);v[j*3+2]=Math.sin(b)}
@@ -103,8 +72,6 @@ function dij(net,src){
 function pathNodes(net,src,dst){const r=dij(net,src);if(!isFinite(r.dist[dst]))return null;const out=[dst];let c=dst;while(c!==src){c=r.prev[c];out.push(c)}return out.reverse()}
 
 /* ---------- real road graph: Overpass (OSM) → same net shape → Dijkstra ---------- */
-const OPS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
-const OPQ='[out:json][timeout:20];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified|residential)$"](%B);out geom;';
 async function fetchOSMWays(sp){
  const dLa=.28,dLo=Math.min(1.4,.28/Math.cos(sp.lat*Math.PI/180)),STEP=.15,tiles=[];
  for(let la=sp.lat-dLa;la<sp.lat+dLa-.01;la+=STEP)for(let lo=sp.lon-dLo;lo<sp.lon+dLo-.01;lo+=STEP)
@@ -164,49 +131,7 @@ async function upgradeOSMNet(sp){
 }
 
 /* ---------- global pickup: illustrative long-distance paths ---------- */
-const PICKS=[['Houston, USA',-95.37,29.76],['Los Angeles, USA',-118.24,34.05],['Montreal, Canada',-73.57,45.5],['Mexico City, Mexico',-99.13,19.43],['Sao Paulo, Brazil',-46.63,-23.55],['Rotterdam, Netherlands',4.48,51.92],['Toulouse, France',1.44,43.6],['Johannesburg, South Africa',28.05,-26.2],['Dubai, UAE',55.27,25.2],['Bengaluru, India',77.59,12.97],['Shenzhen, China',114.06,22.54],['Tokyo, Japan',139.69,35.69],['Jakarta, Indonesia',106.85,-6.21],['Makassar, Indonesia',119.41,-5.15],['Sydney, Australia',151.21,-33.87]];
-const RAD=Math.PI/180;
-const toV=(lon,lat)=>{const a=lon*RAD,b=lat*RAD;return[Math.cos(b)*Math.cos(a),Math.cos(b)*Math.sin(a),Math.sin(b)]};
-const fromV=v=>{const n=Math.hypot(v[0],v[1],v[2]);return[Math.atan2(v[1],v[0])/RAD,Math.asin(v[2]/n)/RAD]};
-const vcross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-const vdot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
-const hav=(a,b)=>6371*Math.acos(Math.max(-1,Math.min(1,vdot(toV(a[0],a[1]),toV(b[0],b[1])))));
-const unw=(lon,ref)=>lon+360*Math.round((ref-lon)/360);
-const relPad=l=>S.sp.lon+(((l-S.sp.lon+540)%360+360)%360-180);
-function isLandIn(L,lon,lat){
- lon=((lon+540)%360+360)%360-180;let inside=false;
- for(const r of L){const b=r.b;if(lon<b[0]||lon>b[2]||lat<b[1]||lat>b[3])continue;
-  let c=false;const n=r.lon.length;for(let i=0,j=n-1;i<n;j=i++){const xi=r.lon[i],yi=r.lat[i],xj=r.lon[j],yj=r.lat[j];if((yi>lat)!==(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)c=!c}
-  if(c)inside=!inside}
- return inside}
-function isLand(lon,lat){return isLandIn(L50,lon,lat)}
-const isLand10=(lon,lat)=>isLandIn(L10,lon,lat);
 /* ---------- raster water masks: canvas fill does point-in-poly, O(1) lookups ---------- */
-let SEAMASK=null;
-function seaMask(){
- if(SEAMASK)return SEAMASK;
- const W=4800,H=2400,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d',{willReadFrequently:true});
- g.fillStyle='#000';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.beginPath();
- for(const r of L50){const n=r.lon.length;for(let j=0;j<n;j++){const x=(r.lon[j]+180)*W/360,y=(90-r.lat[j])*H/180;j?g.lineTo(x,y):g.moveTo(x,y)}g.closePath()}
- g.fill('evenodd');
- const img=g.getImageData(0,0,W,H).data;
- SEAMASK=(lon,lat)=>{const x=((lon+540)%360-180+180)*W/360|0,y=(90-lat)*H/180|0;if(x<0||x>=W||y<0||y>=H)return true;return img[(y*W+x)*4]>127};
- return SEAMASK}
-const FMASKS={};
-function fineMask(lon0,lat0){
- const k=lon0.toFixed(1)+','+lat0.toFixed(1);if(FMASKS[k])return FMASKS[k];
- const W=320,RAD=2.0,c=document.createElement('canvas');c.width=W;c.height=W;const g=c.getContext('2d',{willReadFrequently:true});
- g.fillStyle='#000';g.fillRect(0,0,W,W);g.fillStyle='#fff';g.beginPath();
- const lo0=lon0-RAD,lo1=lon0+RAD,la0=lat0-RAD,la1=lat0+RAD;
- for(const r of L10){const b=r.b;if(b[2]<lo0||b[0]>lo1||b[3]<la0||b[1]>la1)continue;const n=r.lon.length;
-  for(let j=0;j<n;j++){const x=(r.lon[j]-lo0)*W/(RAD*2),y=(la1-r.lat[j])*W/(RAD*2);j?g.lineTo(x,y):g.moveTo(x,y)}g.closePath()}
- g.fill('evenodd');
- const img=g.getImageData(0,0,W,W).data;
- const f=(lon,lat)=>{const x=(lon-lo0)*W/(RAD*2)|0,y=(la1-lat)*W/(RAD*2)|0;if(x<0||x>=W||y<0||y>=W)return seaMask()(lon,lat);return img[(y*W+x)*4]>127};
- f.lon0=lon0;f.lat0=lat0;return FMASKS[k]=f}
-function mkWaterFast(a,b){
- const fm=[fineMask(a[0],a[1]),fineMask(b[0],b[1])],sm=seaMask();
- return(lon,lat)=>{for(const f of fm){if(Math.abs(lon-f.lon0)<=2&&Math.abs(lat-f.lat0)<=2)return!f(lon,lat)}return!sm(lon,lat)}}
 
 function mkFar(lon,lat,name){
  lon=relPad(lon);let nm=name;
@@ -259,18 +184,6 @@ function setFar(p){
  toast(`Pickup: ${p.name}. Recommended transport: ${S.recM?MODEL[S.recM]:'none, no safe mode'}.`)}
 
 /* ---------- transport modes: land, sea, air ---------- */
-const AIRPORTS=[{c:'TTS',n:'Kennedy Space Center SLF',lon:-80.69,lat:28.615},{c:'MCO',n:'Orlando Intl',lon:-81.31,lat:28.43},{c:'IAH',n:'Houston Intercontinental',lon:-95.34,lat:29.98},{c:'LAX',n:'Los Angeles Intl',lon:-118.41,lat:33.94},{c:'YUL',n:'Montreal-Trudeau',lon:-73.74,lat:45.47},{c:'MEX',n:'Mexico City Intl',lon:-99.07,lat:19.44},{c:'GRU',n:'Sao Paulo-Guarulhos',lon:-46.47,lat:-23.43},{c:'RTM',n:'Rotterdam The Hague',lon:4.44,lat:51.96},{c:'TLS',n:'Toulouse-Blagnac',lon:1.36,lat:43.63},{c:'JNB',n:'Johannesburg O.R. Tambo',lon:28.24,lat:-26.13},{c:'DXB',n:'Dubai Intl',lon:55.36,lat:25.25},{c:'BLR',n:'Bengaluru Intl',lon:77.71,lat:13.2},{c:'SZX',n:"Shenzhen Bao'an",lon:113.81,lat:22.64},{c:'HND',n:'Tokyo Haneda',lon:139.78,lat:35.55},{c:'CGK',n:'Jakarta Soekarno-Hatta',lon:106.66,lat:-6.13},{c:'UPG',n:'Makassar Hasanuddin',lon:119.55,lat:-5.06},{c:'SYD',n:'Sydney Kingsford Smith',lon:151.18,lat:-33.95},{c:'BIK',n:'Frans Kaisiepo, Biak',lon:136.11,lat:-1.19}];
-const PORTS=[{c:'Port Canaveral',n:'Port Canaveral',lon:-80.62,lat:28.41},{c:'Houston',n:'Port of Houston',lon:-95.27,lat:29.73},{c:'Los Angeles',n:'Los Angeles / Long Beach',lon:-118.25,lat:33.73},{c:'Montreal',n:'Port of Montreal',lon:-73.54,lat:45.5},{c:'Veracruz',n:'Veracruz',lon:-96.13,lat:19.2},{c:'Santos',n:'Santos',lon:-46.3,lat:-23.98},{c:'Rotterdam',n:'Rotterdam',lon:4.14,lat:51.95},{c:'Bordeaux',n:'Bordeaux',lon:-.55,lat:44.87},{c:'Durban',n:'Durban',lon:31.03,lat:-29.87},{c:'Jebel Ali',n:'Jebel Ali',lon:55.03,lat:25.01},{c:'Chennai',n:'Chennai',lon:80.3,lat:13.1},{c:'Shenzhen',n:'Shenzhen Yantian',lon:114.28,lat:22.57},{c:'Yokohama',n:'Yokohama',lon:139.65,lat:35.45},{c:'Tanjung Priok',n:'Tanjung Priok, Jakarta',lon:106.88,lat:-6.1},{c:'Makassar',n:'Makassar',lon:119.41,lat:-5.13},{c:'Sydney',n:'Port Botany, Sydney',lon:151.22,lat:-33.97},{c:'Port of Biak',n:'Port of Biak',lon:136.07,lat:-1.18}];
-AIRPORTS.push({c:'XMR',n:'Cape Canaveral Skid Strip',lon:-80.567,lat:28.467},{c:'AZA',n:'Phoenix-Mesa Gateway',lon:-111.655,lat:33.308},{c:'CGN',n:'Cologne Bonn',lon:7.143,lat:50.866});
-PORTS.push({c:'Michoud',n:'Michoud (NASA), New Orleans',lon:-89.93,lat:29.97});
-const ALLT=[...AIRPORTS.map(a=>({...a,k:'ap'})),...PORTS.map(a=>({...a,k:'pt'}))];
-const TERM={ksc:['TTS','Port Canaveral'],biak:['BIK','Port of Biak']};
-const DOC={air:{TTS:['Super Guppy','An-124'],XMR:['An-124'],TLS:['An-124'],CGN:['An-124'],AZA:['An-124']},sea:{'Port Canaveral':['RocketShip'],'Michoud':['Pegasus barge']}};
-const VREF=[{n:'Super Guppy',o:'Air, NASA',u:'Orion crew module structure, SLS Orion Stage Adapter',t:'KSC Shuttle Landing Facility (TTS), Michoud (New Orleans)'},
-{n:'Antonov An-124',o:'Air, Antonov Airlines / Volga-Dnepr',u:'Atlas V stage, Perseverance booster, satellites up to ~36 t total, Gateway HALO module',t:'TTS, Cape Canaveral Skid Strip (XMR), Toulouse (TLS), Cologne Bonn (CGN), Phoenix-Mesa (AZA)'},
-{n:'Pegasus barge',o:'Sea, NASA, tug-pushed',u:'SLS core stage',t:'Michoud to KSC, about 900 mi, about 6 days'},
-{n:'R/S RocketShip',o:'Sea, ULA, 312 ft ro-ro',u:'Atlas V and Vulcan stages',t:'Decatur AL to Port Canaveral (about 1 week); Vandenberg via Panama (about 3 weeks)'},
-{n:'Heavy-haul trucks, crawler-transporter',o:'Land',u:'Last leg to the pad',t:'KSC and Cape Canaveral'}];
 function vehHTML(r){if(r.mode==='land')return `<b>${MODEV.land}</b>`;
  const d=DOC[r.mode],a=d[r.tA.c]||null,b=d[r.tB.c]||null;let nm,ev=false;
  if(r.mode==='air'){const x=a&&b?a.filter(n=>b.includes(n)):[];if(x.length){nm=x.join(' / ');ev=true}else nm='An-124 class outsized freighter'}
@@ -278,134 +191,8 @@ function vehHTML(r){if(r.mode==='land')return `<b>${MODEV.land}</b>`;
  return `<b>${nm}</b>`}
 function noneBanner(c,M){return `<div class="tmwarn">⛔ <b>No transport mode is recommended on ${c.l}.</b> ${MORD.map(m=>`${MODEL[m]}: ${!M[m].ok?M[m].why:(M[m].txt||'blocked by weather')}`).join('; ')}.</div>`}
 function refHTML(){return `<details class="tmref"><summary>NASA transport reference</summary><table><tr><th>Vehicle</th><th>Carries</th><th>Documented at</th></tr>${VREF.map(v=>`<tr><td><b>${v.n}</b><br><span class="hint">${v.o}</span></td><td>${v.u}</td><td>${v.t}</td></tr>`).join('')}</table><div class="hint">Terminals marked ✓ on the map are documented for NASA cargo. Other terminals are assumed. No schedule is published, so times here are simulated.</div></details>`}
-const MODEL={land:'Land',sea:'Sea',air:'Air'},MORD=['land','sea','air'];
-const MODEV={land:'Heavy-haul transporter (multi-axle trailer)',sea:'Cargo barge or heavy-lift ship (NASA Pegasus class)',air:'Outsized cargo aircraft (Super Guppy / An-124 class)'};
-const SEAVIA={'Michoud|Port Canaveral':[[-89.0,28.6],[-86.5,25.4],[-83.2,24.0],[-80.0,25.3],[-79.6,27.2]],'Houston|Port Canaveral':[[-92.5,27.6],[-86.5,25.4],[-83.2,24.0],[-80.0,25.3],[-79.6,27.2]],'Tanjung Priok|Port of Biak':[[112,-6.3],[116.5,-7.6],[121,-7.2],[127,-6.6],[125.8,-2.6],[127,0],[131.5,1.5],[134.5,.5]],'Rotterdam|Port Canaveral':[[-6,49.3]],'Bordeaux|Port Canaveral':[[-9.6,43.3]]};
 const nearestT=(L,lon,lat,max)=>{let b=null,bd=max;L.forEach(a=>{const d=hav([lon,lat],[relPad(a.lon),a.lat]);if(d<bd){bd=d;b=a}});return b?{t:b,km:bd}:null};
-function gcPts(a,b,n){const A=toV(a[0],a[1]),B=toV(b[0],b[1]),ang=Math.acos(Math.max(-1,Math.min(1,vdot(A,B))));if(ang<1e-6)return[[a[0],a[1]],[b[0],b[1]]];const sn=Math.sin(ang),out=[];for(let k=0;k<=n;k++){const u=k/n,x=Math.sin((1-u)*ang)/sn,y=Math.sin(u*ang)/sn;out.push(fromV([A[0]*x+B[0]*y,A[1]*x+B[1]*y,A[2]*x+B[2]*y]))}out[0]=[a[0],a[1]];out[n]=[b[0],b[1]];return out}
-function chaikin(p,n){for(let r=0;r<n;r++){const o=[p[0]];for(let i=0;i<p.length-1;i++){const A=p[i],B=p[i+1];o.push([A[0]*.75+B[0]*.25,A[1]*.75+B[1]*.25],[A[0]*.25+B[0]*.75,A[1]*.25+B[1]*.75])}o.push(p[p.length-1]);p=o}return p}
-function viaPoly(w){let out=[];for(let i=0;i<w.length-1;i++){const d=hav(w[i],w[i+1]),s=gcPts(w[i],w[i+1],Math.max(2,Math.round(d/120)));out=out.concat(i?s.slice(1):s)}return chaikin(out,2)}
-function arcPoly(a,b,am,R){const A=toV(a[0],a[1]),B=toV(b[0],b[1]);let ax=vcross(A,B),an=Math.hypot(ax[0],ax[1],ax[2]);if(an<1e-6){ax=[0,0,1];an=1}ax=ax.map(x=>x/an);
- const ang=Math.max(1e-6,Math.acos(Math.max(-1,Math.min(1,vdot(A,B))))),sn=Math.sin(ang),angE=Math.min(ang,.5),ph=R()*6.28,wa=(.02+R()*.02)*angE,M=Math.max(8,Math.round(ang*6371/120)),out=[];
- for(let k=0;k<=M;k++){const u=k/M,x=Math.sin((1-u)*ang)/sn,y=Math.sin(u*ang)/sn,q=[A[0]*x+B[0]*y,A[1]*x+B[1]*y,A[2]*x+B[2]*y],o=am*angE*Math.sin(Math.PI*u)+wa*Math.sin(4*Math.PI*u+ph)*Math.sin(Math.PI*u);out.push(fromV([q[0]+ax[0]*o,q[1]+ax[1]*o,q[2]+ax[2]*o]))}
- out[0]=[a[0],a[1]];out[M]=[b[0],b[1]];return out}
-const polyKm=p=>{const c=[0];for(let k=1;k<p.length;k++)c.push(c[k-1]+hav(p[k-1],p[k]));return c};
-function landFrac(p){let c=0,n=0;for(let i=3;i<p.length-3;i++){n++;if(isLand(p[i][0],p[i][1]))c++}return n?c/n:0}
-function unwrapBack(p){for(let k=p.length-2;k>=0;k--)p[k]=[unw(p[k][0],p[k+1][0]),p[k][1]];return p}
-function modeBlobs(poly,R,rm){const cum=polyKm(poly),Lt=cum[cum.length-1];return[.3,.52,.74].map(t=>{let i=1;while(i<cum.length-1&&cum[i]<Lt*t)i++;const q=poly[i];return{lon:relPad(q[0]+(R()-.5)*3),lat:q[1]+(R()-.5)*3,r:Math.max(170,Lt*(rm+R()*.03))}})}
 /* ---------- sea legs: A* over a water grid on real Natural Earth coast ---------- */
-let WATER=null;
-function segWater(a,b){const d=hav(a,b),n=Math.max(2,Math.ceil(d/6));for(let k=1;k<n;k++){const u=k/n;if(!WATER(a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u))return false}return true}
-function waterFrac(p){const cum=polyKm(p),Lt=cum[cum.length-1],n=Math.max(10,Math.ceil(Lt/8)),ap=Math.min(60,Lt*.08);let land=0,tot=0;for(let k=1;k<n;k++){const s=Lt*k/n;if(s<ap||s>Lt-ap)continue;let i=1;while(i<cum.length-1&&cum[i]<s)i++;const u=(s-cum[i-1])/((cum[i]-cum[i-1])||1),x=Math.max(-179.9999,Math.min(179.9999,p[i-1][0]+(p[i][0]-p[i-1][0])*u)),y=p[i-1][1]+(p[i][1]-p[i-1][1])*u;tot++;if(!WATER(x,y))land++}return tot?land/tot:0}
-function chaikinW(pts){
- if(pts.length<3)return pts;
- for(let k=0;k<2;k++){
-  const n=pts.length,keep=new Array(n).fill(false);
-  for(let i=1;i<n-1;i++){const R=[pts[i-1][0]*.25+pts[i][0]*.75,pts[i-1][1]*.25+pts[i][1]*.75],Q=[pts[i][0]*.75+pts[i+1][0]*.25,pts[i][1]*.75+pts[i+1][1]*.25];if(!segWater(R,Q))keep[i]=true}
-  const o=[pts[0]];
-  for(let i=0;i<n-1;i++){const A=pts[i],B=pts[i+1];o.push([A[0]*.75+B[0]*.25,A[1]*.75+B[1]*.25],[A[0]*.25+B[0]*.75,A[1]*.25+B[1]*.75]);if(i+1<n-1&&keep[i+1])o.push(B)}
-  o.push(pts[n-1]);pts=o}
- return pts}
-function seaGraph(a,b,M){
- WATER=mkWaterFast(a,b);
- const lo0=Math.min(a[0],b[0])-M,lo1=Math.max(a[0],b[0])+M,la0=Math.max(-78,Math.min(a[1],b[1])-M),la1=Math.min(78,Math.max(a[1],b[1])+M),ST=1.1,FS=.13,FR=1.4;
- const cells=[],nearEnd=p=>Math.hypot(p[0]-a[0],p[1]-a[1])<=FR||Math.hypot(p[0]-b[0],p[1]-b[1])<=FR;
- const add=(lon,lat,reach)=>{if(WATER(lon,lat))cells.push({lon,lat,reach,adj:[]})};
- for(let lat=la0;lat<=la1+.001;lat+=ST)for(let lon=lo0;lon<=lo1+.001;lon+=ST)if(!nearEnd([lon,lat]))add(lon,lat,ST*2.35);
- for(let lat=la0;lat<=la1+.001;lat+=FS)for(let lon=lo0;lon<=lo1+.001;lon+=FS)if(nearEnd([lon,lat]))add(lon,lat,FS*3.2);
- const BUK=1.0,buk=new Map(),bk=(lon,lat)=>Math.floor(lon/BUK)+','+Math.floor(lat/BUK);
- cells.forEach((c,i)=>{const k=bk(c.lon,c.lat);(buk.get(k)||buk.set(k,[]).get(k)).push(i)});
- const RMAX=ST*2.35,RB=Math.ceil(RMAX/BUK);
- for(let i=0;i<cells.length;i++){const c=cells[i],bi=Math.floor(c.lon/BUK),bj=Math.floor(c.lat/BUK);
-  for(let dj=-RB;dj<=RB;dj++)for(let di=-RB;di<=RB;di++){const l=buk.get((bi+di)+','+(bj+dj));if(!l)continue;
-   for(const t of l){if(t===i)continue;const o=cells[t],d=Math.hypot(c.lon-o.lon,c.lat-o.lat);
-    if(d>Math.max(c.reach,o.reach)||d<1e-6)continue;
-    if(segWater([c.lon,c.lat],[o.lon,o.lat]))c.adj.push({to:t,w:hav([c.lon,c.lat],[o.lon,o.lat])})}}}
- const nearW=p=>{const ix=cells.map((c,i)=>[i,(c.lon-p[0])**2+(c.lat-p[1])**2]).sort((x,y)=>x[1]-y[1]).slice(0,14);for(const e of ix)if(segWater(p,[cells[e[0]].lon,cells[e[0]].lat]))return e[0];return ix.length?ix[0][0]:-1};
- return{cells,ia:nearW(a),ib:nearW(b)}}
-function seaAStar(g,src,dst,pen){
- const N=g.cells.length,dist=new Float64Array(N).fill(Infinity),prev=new Int32Array(N).fill(-1),done=new Uint8Array(N);dist[src]=0;
- const goal=[g.cells[dst].lon,g.cells[dst].lat],key=i=>dist[i]+hav([g.cells[i].lon,g.cells[i].lat],goal);
- const H=[src],swap=(i,j)=>{const t=H[i];H[i]=H[j];H[j]=t},up=i=>{for(;i>0;){const p=(i-1)>>1;if(key(H[p])<=key(H[i]))break;swap(p,i);i=p}},dn=i=>{for(;;){const l=2*i+1,r=l+1;let m=i;if(l<H.length&&key(H[l])<key(H[m]))m=l;if(r<H.length&&key(H[r])<key(H[m]))m=r;if(m===i)break;swap(m,i);i=m}};
- while(H.length){const u=H[0];H[0]=H[H.length-1];H.pop();if(H.length)dn(0);
-  if(u===dst)break;if(done[u])continue;done[u]=1;
-  for(const a of g.cells[u].adj){const nd=dist[u]+a.w*(1+(pen?pen(u,a.to):0));if(nd<dist[a.to]){dist[a.to]=nd;prev[a.to]=u;H.push(a.to);up(H.length-1)}}}
- if(!isFinite(dist[dst]))return null;
- const idx=[dst];let c=dst;for(;;){c=prev[c];if(c<0)break;idx.push(c);if(c===src)break}
- return idx.reverse()}
-function seaPaths(a,b){
- let g=null;
- for(const M of [2.6,5,9,15,24]){const t=seaGraph(a,b,M);if(t.ia<0||t.ib<0)continue;g=t;if(seaAStar(g,g.ia,g.ib))break;g=null}
- if(!g)return null;
- const cp=new Float64Array(g.cells.length),out=[],seen=[];
- for(let k=0;k<5&&out.length<3;k++){
-  const idx=seaAStar(g,g.ia,g.ib,(u,v)=>(cp[u]+cp[v])*.5);if(!idx)break;
-  const poly=chaikinW(idx.map(i=>[g.cells[i].lon,g.cells[i].lat]));
-  let dup=false;for(const q of seen){const s=new Set(q);let same=0;idx.forEach(i=>{if(s.has(i))same++});if(same/idx.length>.8){dup=true;break}}
-  if(!dup){out.push(poly);seen.push(new Set(idx))}
-  for(const i of idx){cp[i]+=1.2;for(const a of g.cells[i].adj)cp[a.to]+=.55}}
- return out.length?out:null}
-function legPolys(a,b,key){
- const R=rng(key),out=[];let raw=[];
- for(const am of [0,.2,-.2,.35,-.35,.5,-.5]){const pl=arcPoly(a,b,am,R);unwrapBack(pl);const km=pl.reduce((t,q,i)=>i?t+hv(pl[i-1],q):0,0);
-  raw.push({pl,km,ok:(1-landFrac(pl))*km<=55})}
- let pass=raw.filter(x=>x.ok);if(!pass.length)pass=[raw[0]];
- const m=Math.min(...pass.map(x=>x.km));pass=pass.filter(x=>x.km<=m*1.3);
- return pass.slice(0,3).map(x=>x.pl)}
-function legSegs(poly,blobs,sp,Dk){
- const cum=polyKm(poly),Lt=cum[cum.length-1],n=Math.max(3,Math.round(Lt/35)),sd=sp.seed,cell=Math.max(1.4,Dk/25),segs=[];
- const at=s=>{s=Math.max(0,Math.min(Lt,s));let i=1;while(i<cum.length-1&&cum[i]<s)i++;const u=(s-cum[i-1])/((cum[i]-cum[i-1])||1);return[poly[i-1][0]+(poly[i][0]-poly[i-1][0])*u,poly[i-1][1]+(poly[i][1]-poly[i-1][1])*u]};
- for(let i=0;i<n;i++){const s0=Lt*i/n,s1=Lt*(i+1)/n,pts=[at(s0)];for(let j=1;j<poly.length-1;j++)if(cum[j]>s0&&cum[j]<s1)pts.push(poly[j]);pts.push(at(s1));
-  const c=at((s0+s1)/2),xk=c[0]*100,yk=c[1]*111;let w=0;for(const b of blobs){const d=hav(c,[b.lon,b.lat])/b.r;w=Math.max(w,Math.exp(-d*d*1.1))}
-  const k1=Math.max(.3,.6+7.2*Math.pow(w,1.15)+VN(xk,yk,sd+1,cell)*1.3+(VN(xk,yk,sd+7,cell*3.5)-.5)*3.4+(sp.clim-1)*.4);
-  const k2=sp.gunw?(VN(xk,yk,sd+2,cell)-.5)*5-14*w*(VN(xk,yk,sd+3,cell)*.7+.3):null;
-  const s1k=st1(k1),s2k=k2==null?'g':st2(k2),k4=worst(s1k,s2k);
-  segs.push({i,km0:s0,km1:s1,pts,ll:pts,c:[xk,yk],k1,k2,v1:45,vm:45,k4,s1k,s2k,wet:k1>=3,ser:[k1,k1,k1,k1,k1,k1],mode:'land',pv:[]})}
- return{poly,km:Lt,segs}}
-function mkLegSet(polys,role,from,to,sp,Dk){
- const cum=polyKm(polys[0]),Lt=cum[cum.length-1],bl=[.3,.7].map(t=>{let i=1;while(i<cum.length-1&&cum[i]<Lt*t)i++;const q=polys[0][i];return{lon:q[0],lat:q[1],r:Math.max(12,Lt*.15)}});
- return{role,from,to,sel:0,c:polys.map(pl=>legSegs(pl,bl,sp,Dk))}}
-function legAcc(segs,v,o){segs.forEach(s=>{const L=s.km1-s.km0,v1=s.vm||45,f=({g:1,y:.71,r:.47}[s.k4]);o.base+=L/v1*60;o.sat+=(L/(v1*f)-L/v1)*60;let sp=v1*f;if(s.wet){const sp2=sp*(1-.17*rl(v)*Math.min(1,s.k1/6));o.rain+=(L/sp2-L/sp)*60}})}
-function legBest(ls,v){let bi=0,bm=1e9;ls.c.forEach((c,i)=>{const o={base:0,sat:0,rain:0};legAcc(c.segs,v,o);c.eff=o.base+o.sat+o.rain;if(c.eff<bm-1e-9){bm=c.eff;bi=i}});return ls.pin!=null&&ls.c[ls.pin]?ls.pin:bi}
-function legRec(ls){let bi=0,bm=1e9;ls.c.forEach((c,i)=>{if(c.eff<bm-1e-9){bm=c.eff;bi=i}});return bi}
-function mkModeRoute(mode,idx,A,B,main,blobs,sp,p,Dk){
- const pad=[sp.lon,sp.lat],pk=[p.lon,p.lat],a=main[0],b=main[main.length-1];
- const kseed=(p.h*131+sp.seed*17+idx*7+(mode==='sea'?1:2))>>>0,prePs=legPolys(pk,a,kseed),postPs=legPolys(b,pad,kseed+99),pre=prePs[0],post=postPs[0];
- const full=[...pre,...main.slice(1),...post.slice(1)].map(q=>[q[0],q[1]]),iA=pre.length-1,iB=iA+main.length-1;unwrapBack(full);
- const pp=full.slice(0,iA+1),mp=full.slice(iA,iB+1),qp=full.slice(iB),cum=polyKm(mp),Lt=cum[cum.length-1],preKm=polyKm(pp).pop(),postKm=polyKm(qp).pop();
- const dA=full[iA][0]-a[0],dB=full[iB][0]-b[0],shf=(ps,d)=>ps.map(pl=>pl.map(q=>[q[0]+d,q[1]]));
- const legSets=[mkLegSet(shf(prePs,dA),'pre',p.name,A.c,sp,Dk),mkLegSet(shf(postPs,dB),'post',B.c,sp.name,sp,Dk)];
- const atKm=s=>{s=Math.max(0,Math.min(Lt,s));let i=1;while(i<cum.length-1&&cum[i]<s)i++;const u=(s-cum[i-1])/((cum[i]-cum[i-1])||1);return[mp[i-1][0]+(mp[i][0]-mp[i-1][0])*u,mp[i-1][1]+(mp[i][1]-mp[i-1][1])*u]};
- const sd=sp.seed,cell=Math.max(1.4,Dk/25),N=22,segs=[];
- for(let i=0;i<N;i++){const s0=Lt*i/N,s1=Lt*(i+1)/N,pts=[atKm(s0)];for(let j=1;j<mp.length-1;j++)if(cum[j]>s0&&cum[j]<s1)pts.push(mp[j]);pts.push(atKm(s1));
-  const c=atKm((s0+s1)/2),xk=c[0]*100,yk=c[1]*111;let w=0;for(const bl of blobs){const d=hav(c,[bl.lon,bl.lat])/bl.r;w=Math.max(w,Math.exp(-d*d*1.1))}
-  segs.push({i,km0:s0,km1:s1,pts,ll:pts,c:[xk,yk],k1:.3,k2:null,v1:92,k4:'g',s1k:'g',s2k:'g',wet:false,ser:[.3,.3,.3,.3,.3,.3],mode,vm:mode==='sea'?(A.c==='Michoud'?10:26):800,w,b:VN(xk,yk,sd+5,cell),loc:(s0+s1)/2/Lt,pv:[]})}
- const L='ABCDE';
- return{idx,label:(mode==='sea'?'Sea ':'Air ')+L[idx],short:L[idx],custom:false,far:true,mode,nodes:[],segs,len:Lt+preKm+postKm,mainKm:Lt,legKm:preKm+postKm,legH:0,legSets,fixedH:mode==='sea'?24:9,at:null,atLL:f=>atKm(Lt*f),polyLL:full,midLL:atKm(Lt/2),vehLL:atKm(Lt*.5),tA:A,tB:B,_pp:pp,_mp:mp,_qp:qp,_Dk:Dk}}
-function modeAlts(mode,A,B,tryN,sp,p,Dk){
- const R=rng((p.h*6151+sp.seed*7717+tryN*977+(mode==='sea'?1:2))>>>0),a=[relPad(A.lon),A.lat],b=[relPad(B.lon),B.lat];let polys=[];
- if(mode==='air')polys=[0,.12+R()*.04,-(.12+R()*.04)].map(am=>arcPoly(a,b,am,R));
- else{const wp=seaPaths(a,b);
-  if(wp)polys=wp.map(pl=>[a,...pl,b]);
-  else{const via=SEAVIA[A.c+'|'+B.c];
-   if(via)polys=[0,1.6,-1.6].map(d=>viaPoly([a,...via.map((q,i)=>[relPad(q[0]),q[1]+(i>0?d:0)]),b]));
-   else polys=[0,.14+R()*.04,-(.14+R()*.04)].map(am=>arcPoly(a,b,am,R))}
-  if(WATER){const w=polys.filter(pl=>waterFrac(pl)<=.04);if(w.length)polys=w}
-  polys=polys.filter(pl=>landFrac(pl)<=.18)}
- if(!polys.length)return null;
- const blobs=modeBlobs(polys[0],R,mode==='sea'?.09:.04);
- return{routes:polys.map((pl,i)=>mkModeRoute(mode,i,A,B,pl,blobs,sp,p,Dk)),blobs}}
-function applyWeather(r,pv){
- if(r.mode==='land')return;
- r.segs.forEach(s=>{const x=s.loc,mm=x<.5?pv[0]+(pv[1]-pv[0])*x*2:pv[1]+(pv[2]-pv[1])*(x-.5)*2,f=s.w*Math.min(1.25,mm/45),b=s.b;
-  if(r.mode==='sea'){const wv=seaWxAt(s.c[0]/100,s.c[1]/111),hs=wv!=null?Math.max(.2,wv*(.9+.25*b)):.7+1.3*b+4.6*f,wd=9+9*b+34*f,st=Math.min(10,f*10.5+1.2*b);
-   s.pv=[{l:'Wave height',v:hs,u:'m',k:hs>=3?'r':hs>=2?'y':'g'},{l:'Wind',v:wd,u:'kn',k:wd>=22?'r':wd>=17?'y':'g'}]}
-  else{const vis=Math.max(.5,22-4*b-19*f),cw=7+10*b+36*f,st=Math.min(10,f*8+1.2*b);
-   s.pv=[{l:'Visibility',v:vis,u:'km',k:vis<5?'r':vis<8?'y':'g'},{l:'Crosswind',v:cw,u:'kt',k:cw>=25?'r':cw>=20?'y':'g'},{l:'Thunderstorm distance',v:Math.max(0,160-150*st/10),u:'nm',k:(160-150*st/10)<20?'r':'g'}]}
-  s.k4=s.pv.reduce((a,q)=>worst(a,q.k),'g')})}
-function worstTxt(r){const g=l=>r.segs.map(s=>(s.pv.find(q=>q.l===l)||{v:0}).v);
- if(r.mode==='sea')return `waves up to ${f1(Math.max(...g('Wave height')))} m and wind up to ${Math.round(Math.max(...g('Wind')))} kn`;
- return `visibility down to ${f1(Math.min(...g('Visibility')))} km and crosswind up to ${Math.round(Math.max(...g('Crosswind')))} kt`}
 function bestRed(g,mm){g.routes.forEach(r=>applyWeather(r,[mm,mm,mm]));let b=null,m=1e9;g.routes.forEach(r=>{const e=scoreRoute(r,mm).eff;if(e<m){m=e;b=r}});return b.segs.filter(s=>s.k4==='r').length}
 function buildTM(mode,list,maxKm,B,noun,sp,p,Dk){
  const k=mode==='air'?'ap':'pt',out={ok:false,routes:[],blobs:[],why:'',A:null,B:{...B,k}},hit=nearestT(list,p.lon,p.lat,maxKm);
@@ -419,10 +206,6 @@ function buildTM(mode,list,maxKm,B,noun,sp,p,Dk){
  out.routes=best.routes;out.blobs=best.blobs;out.ok=true;return out}
 function mkIds(sp,p){const a=H(p.h,sp.seed,9),b=H(p.h,sp.seed,10),c=H(p.h,sp.seed,11),d=H(p.h,sp.seed,12);
  return{call:'SRE'+(100+Math.floor(a*900)),hex:(0xA00000+Math.floor(b*0x0fffff)).toString(16).toUpperCase(),imo:'9'+String(100000+Math.floor(c*899999)),mmsi:(sp.id==='ksc'?'366':'525')+String(100000+Math.floor(d*899999)),ship:'MV SURE Carrier'}}
-function landId(lon,lat){lon=((lon+540)%360+360)%360-180;let id=-1,ba=-1;
- L50.forEach((r,ix)=>{const b=r.b;if(lon<b[0]||lon>b[2]||lat<b[1]||lat>b[3])return;const ar=(b[2]-b[0])*(b[3]-b[1]);if(ar<=ba)return;
-  let c=false;const n=r.lon.length;for(let i=0,j=n-1;i<n;j=i++){const xi=r.lon[i],yi=r.lat[i],xj=r.lon[j],yj=r.lat[j];if((yi>lat)!==(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)c=!c}
-  if(c){ba=ar;id=ix}});return id}
 function buildModes(){
  const sp=S.sp,p=S.far,Dk=hav([p.lon,p.lat],[sp.lon,sp.lat]),G={};
  const lr=buildFar(),land={routes:lr,blobs:S.farBlobs,ok:lr.length>0,why:lr.length?'':'no continuous land path in this mockup, every path crosses water'};
@@ -434,14 +217,6 @@ function buildModes(){
  G.ids=mkIds(sp,p);S.geo=G;S.seaWx=null;
  if(G.sea&&G.sea.routes&&G.sea.routes.length)fetchSeaWx(G.sea.routes[0]).then(()=>{if(S.seaWx){refreshModes();renderDay()}req()})}
 /* ---------- live sea state: Open-Meteo Marine (free, keyless) ---------- */
-async function fetchSeaWx(r0){
- if(!r0||!r0._mp)return;
- const p=r0._mp,cum=polyKm(p),Lt=cum[cum.length-1],pts=[.22,.5,.78].map(t=>{const s=Lt*t;let i=1;while(i<cum.length-1&&cum[i]<s)i++;const u=(s-cum[i-1])/((cum[i]-cum[i-1])||1);return[p[i-1][0]+(p[i][0]-p[i-1][0])*u,p[i-1][1]+(p[i][1]-p[i-1][1])*u]});
- try{const r=await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${pts.map(q=>q[1].toFixed(3)).join(',')}&longitude=${pts.map(q=>q[0].toFixed(3)).join(',')}&daily=wave_height_max&forecast_days=8&timezone=UTC`);
-  if(!r.ok)throw new Error('sea wx '+r.status);const j=await r.json(),arr=Array.isArray(j)?j:[j];
-  S.seaWx={pts,h:arr.map(d=>d.daily.wave_height_max||[])};
- }catch(e){}}
-function seaWxAt(lon,lat){const w=S.seaWx;if(!w)return null;let sw=0,h=0;w.pts.forEach((p,i)=>{const a=w.h[i];if(!a||a[S.day]==null)return;const d=(p[0]-lon)**2+(p[1]-lat)**2,wt=1/(d+9);h+=a[S.day]*wt;sw+=wt});return sw?h/sw:null}
 function refreshModes(){
  if(!S.far||!S.geo)return false;
  const c=cur(),v=c.v,info={};
@@ -462,10 +237,10 @@ function setMode(m){const i=S.mi&&S.mi[m];if(!i)return;if(!i.ok){toast(`${MODEL[
 function modeBar(){
  if(!S.far||!S.mi){const r0=S.routes[S.ri]||S.routes[0];if(!r0)return '';
   const lt=fmtT(scoreRoute(r0,cur().v).t,1);'';
-  return `<div class="tmbar"><button class="tmc on" disabled><span class="tmh"><i class="dot8 g"></i>Land</span><small>${lt}</small></button><button class="tmc na" disabled title="Not used for a short local trip"><span class="tmh"><i class="dot8"></i>Sea</span><small>n/a</small></button><button class="tmc na" disabled title="Not used for a short local trip"><span class="tmh"><i class="dot8"></i>Air</span><small>n/a</small></button></div>`}
+  return `<div class="tmbar"><button class="tmc on" disabled><span class="tmh"><svg class="mi"><use href="#i-m-land"/></svg><i class="dot8 g"></i>Land</span><small>${lt}</small></button><button class="tmc na" disabled title="Not used for a short local trip"><span class="tmh"><svg class="mi"><use href="#i-m-sea"/></svg><i class="dot8"></i>Sea</span><small>n/a</small></button><button class="tmc na" disabled title="Not used for a short local trip"><span class="tmh"><svg class="mi"><use href="#i-m-air"/></svg><i class="dot8"></i>Air</span><small>n/a</small></button></div>`}
  const c=cur(),M=S.mi,I=S.geo.ids;
  const chips=MORD.map(m=>{const i=M[m],on=m===S.tmCur,st=!i.ok?'':i.blocked?'r':i.red>0?'y':'g';
-  return `<button class="tmc${on?' on':''}${i.ok?'':' na'}" data-m="${m}" title="${i.ok?'':i.why}"><span class="tmh"><i class="dot8 ${st}"></i>${MODEL[m]}${m===S.recM?' ★':''}</span><small>${i.ok?fmtT(i.t,1):'n/a'}</small></button>`}).join('');
+  return `<button class="tmc${on?' on':''}${i.ok?'':' na'}" data-m="${m}" title="${i.ok?'':i.why}"><span class="tmh"><svg class="mi"><use href="#i-m-${m}"/></svg><i class="dot8 ${st}"></i>${MODEL[m]}${m===S.recM?' ★':''}</span><small>${i.ok?fmtT(i.t,1):'n/a'}</small></button>`}).join('');
  const na='';
  const bl=MORD.filter(m=>M[m].ok&&M[m].blocked),alt=S.recM;
  const noneB=S.recM?'':noneBanner(c,M),refB=refHTML();const warn=!S.recM?'':bl.filter(m=>m===S.tmCur).map(m=>`<div class="tmwarn">⚠ <b>${MODEL[m]} not advised:</b> ${M[m].txt}.${alt&&alt!==m?` <button class="btn" id="tmrec" style="margin-left:6px">Use ${MODEL[alt]}</button>`:''}</div>`).join('');
@@ -475,7 +250,6 @@ function modeBar(){
 
  return `<div class="tmbar">${chips}</div>${na}${noneB}${warn}<div class="veh">${v}</div>${refB}`}
 
-const hv=(a,b)=>{const R=6371,r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[0]-a[0])*r,x=Math.sin(dl/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
 /* ---------- routes: alternatives, segments, scoring ---------- */
 function dijW(net,src,dst,wf){
  const n=net.nodes.length,dist=Array(n).fill(Infinity),prev=Array(n).fill(null),done=Array(n).fill(false);dist[src]=0;
@@ -602,43 +376,6 @@ let rrT=null;
 function queueRoadRoute(ms){clearTimeout(rrT);rrT=setTimeout(()=>{if(!S.net||!S.net.real||S.far)return;buildRoutes();S.sel=weakestIdx();renderStats();renderDay();req();routeSrcTag()},ms==null?350:ms)}
 
 /* ---------- AI route assessment via gateway (user key, OpenAI-compatible) ---------- */
-const AIURL='https://model.cvmedandigitalinovasi.com/v1';
-const aiKey=()=>{try{return localStorage.getItem('sure_ai_key_v1')||''}catch(e){return''}};
-let aiTok=0,aiModelId=null,aiT=null;
-const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-async function aiModel(){if(aiModelId)return aiModelId;
- const r=await fetch(AIURL+'/models',{headers:{Authorization:'Bearer '+aiKey()}});if(!r.ok)throw new Error('models '+r.status);
- const j=await r.json(),m=(j.data||[]).map(d=>d.id).filter(id=>!/image|embed|tts|whisper/i.test(id));
- aiModelId=m.find(id=>/flash/i.test(id))||m[0];return aiModelId}
-function aiRender(a){const box=$('#aibox');if(!box)return;
- box.innerHTML=`<div class="airow ${a.risk}"><span class="aib">${({green:'LOW',yellow:'MODERATE',red:'HIGH'})[a.risk]||'—'}</span><p>${esc(a.summary)}</p>${(a.tips||[]).map(t=>`<div class="tip">· ${esc(t)}</div>`).join('')}<div class="hint" style="margin-top:4px">${esc(a.model||'model')} · live gateway assessment</div></div>`}
-function aiSig(){return JSON.stringify([S.sp&&S.sp.id,S.origin,S.far&&S.far.name,S.day,S.cargo,S.routes.length,S.ri,S.len&&S.len.toFixed(0)])}
-async function aiAssess(){
- const tok=++aiTok,box=$('#aibox');if(!box)return;
- const sig=aiSig();
- if(S._aiSig===sig&&S.ai){aiRender(S.ai);return}
- const key=aiKey();
- if(!key){box.innerHTML='<div class="hint">Add an AI gateway key in <b>DB</b> for a live model assessment.</div>';return}
- box.innerHTML='<div class="hint">Asking the model…</div>';
- try{
-  const model=await aiModel();if(tok!==aiTok)return;
-  const st=stats(),c=cur(),r=S.routes[S.ri];if(!r)return;
-  const bad=S.segs.filter(s=>s.k4!=='g').map(s=>({i:s.i,km:+(s.km1-s.km0).toFixed(2),k4:s.k4,k1:+s.k1.toFixed(1)}));
-  const prompt=`You are a NASA logistics risk analyst for spaceport ground supply routes. Respond in STRICT JSON only (no markdown): {"risk":"green|yellow|red","summary":"2-3 sentences, concrete","tips":["action","action","action"],"weakest":<segment index>}.
-Spaceport: ${S.sp.name}. Pickup: ${S.far?S.far.name:'local road pickup'}. Cargo: ${S.cargo}. Day: ${c.l}, forecast rain ${c.v} mm.
-Route: ${r.label}, ${f1(S.len)} km, readiness ${Math.round(st.score)}/100, weakest segment #${st.weak.i+1} (${st.weak.k4}, k1=${st.weak.k1.toFixed(1)}).
-Roads: ${S.net&&S.net.real?'real OpenStreetMap graph routed by Dijkstra with hazard weights':'simulated road network'}.
-Problem segments (k1=radar change index, k4=g/y/r): ${JSON.stringify(bad.slice(0,12))}. Empty means all green.`;
-  const res=await fetch(AIURL+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:.3})});
-  if(!res.ok)throw new Error('ai '+res.status);
-  const j=await res.json(),txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'').replace(/```json|```/g,'').trim();
-  const a=JSON.parse(txt);if(tok!==aiTok)return;a.model=model;S.ai=a;S._aiSig=sig;aiRender(a);
- }catch(e){if(tok!==aiTok)return;box.innerHTML=`<div class="hint">Assessment unavailable (${esc(e.message)}). Check the AI key in DB.</div>`}
-}
-function queueAI(){clearTimeout(aiT);aiT=setTimeout(aiAssess,450)}
-function routeSrcTag(){const e=$('#routeSrc');if(!e)return;
- e.textContent=S.far?(S.routeSrc==='osm'?'truck legs: OSM/OSRM':S.routeSrc==='fetch'?'fetching roads…':'legs: simulated')
-  :(S.net&&S.net.real?`OSM graph · Dijkstra${S.roadWx?' · wx live':''}`:S.routeSrc==='fetch'?'loading OSM…':'simulated roads')}
 function genRain(){
  const sp=S.sp,R=rng(sp.seed*313+7),out=[];
  for(let d=0;d<8;d++)out.push([0,1,2].map(()=>Math.round(sp.clim*Math.pow(R(),2.4)*34)));
@@ -646,9 +383,6 @@ function genRain(){
  const fo=.75+((OK()*37+(S.wp||0)*11)%10)/10*.6,fm=.8+((OK()*13+(S.wp||0)*29)%10)/10*.5;
  return out.map(a=>[Math.round(a[0]*fo),Math.round(a[1]*fm),a[2]]);
 }
-const MONn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const PEAK={ksc:7,vsfb:0,sb:8,kou:4,biak:0,bkn:4};
-function monthLabel(m){const mo=(10+m)%12,yr=2026+Math.floor((10+m)/12);return{l:MONn[mo]+' '+yr,s:MONn[mo],yr,mo}}
 function genMonthly(){
  const sp=S.sp,R=rng(sp.seed*733+3),pk=PEAK[sp.id]??6,out=[];
  const fo=.75+((OK()*37+(S.wp||0)*11)%10)/10*.6,fm=.8+((OK()*13+(S.wp||0)*29)%10)/10*.5;
@@ -671,8 +405,8 @@ async function refreshLiveRain(){
   const j=await r.json(),arr=Array.isArray(j)?j:[j];
   if(tok!==rainTok||arr.length!==3||!arr[0].daily||!arr[0].daily.time)throw 0;
   const dates=arr[0].daily.time;S.rainDates=dates;const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  DAYS=dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]}`});
-  DSH=dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WD[d.getUTCDay()]} ${d.getUTCDate()}`});
+  setDayLabels(dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]}`}),
+   dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WD[d.getUTCDay()]} ${d.getUTCDate()}`}));
   S.rain=dates.map((_,d)=>arr.map(a=>Math.round((a.daily.precipitation_sum[d]||0)*10)/10));
   S.rainSrc='live';renderDay();
  }catch(e){/* keep simulated values */}
@@ -690,13 +424,6 @@ function stats(){
 /* ---------- base canvas ---------- */
 function sizeCanvas(){const r=stage.getBoundingClientRect();S.w=Math.max(300,r.width);S.h=Math.max(300,r.height);S.dpr=Math.min(2,window.devicePixelRatio||1);cv.width=S.w*S.dpr;cv.height=S.h*S.dpr;ov.setAttribute('viewBox',`0 0 ${S.w} ${S.h}`)}
 /* ---------- base canvas: real map tiles (Esri / OSM Carto / hybrid) ---------- */
-const TILESETS={
- sat:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
- osm:['https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],
- hyb:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}']
-};
 if(!S.base)S.base='sat';
 const tcache=new Map();
 function tileAt(u,tz,tx,ty){
@@ -741,7 +468,7 @@ let radarTok=0,radarT=null;const radarCache=new Map();
 function radarDate(){const d=S.rainDates&&S.rainDates[S.day];return(d||new Date(Date.now()+S.day*864e5).toISOString().slice(0,10))+'T12:00:00Z'}
 function scheduleRadar(){
  const tog=$('#togRadar'),lb=$('#radarLbl'),auth=mmAuth();
- if(lb)lb.textContent=auth?'Rain radar · live':'Rain radar · key via DB';
+ if(lb)lb.textContent=auth?'Rain radar · live':'Rain radar · key via Keys';
  if(!tog||!tog.checked||MODEM()||!auth){if(S.radar){S.radar=null;req()}return}
  clearTimeout(radarT);radarT=setTimeout(()=>{
   const tok=++radarTok,nw=U(0,0),se=U(S.w,S.h);
@@ -973,7 +700,6 @@ function up(e){
   if(kind==='truck')setOrigin(n.id);else{if(n.id===S.origin&&!S.far){toast('Pick a point away from the pickup.');drawOverlay();return}setWaypoint(n.id)}
  }
 }
-const HK='sure_history_v1';
 function hget(){try{return JSON.parse(localStorage.getItem(HK)||'[]')}catch(e){return window.__mem||[]}}
 function hset(a){try{localStorage.setItem(HK,JSON.stringify(a))}catch(e){window.__mem=a}}
 function saveAnalysis(){
@@ -1001,7 +727,6 @@ function openHist(id){
 }
 /* ---------- route panels ---------- */
 function cnt3(r){const c={g:0,y:0,r:0};r.segs.forEach(s=>c[s.k4]++);return c}
-const PARTS={base:'a longer trip at normal speed',sat:'slower yellow and red segments',rain:'slower wet-prone road in the rain',red:'extra red segments'};
 function bigPart(a,b){const d={base:a.base-b.base,sat:a.sat-b.sat,rain:a.rain-b.rain};let k='base',m=-1e9;for(const x in d)if(d[x]>m){m=d[x];k=x}return{k,v:m}}
 function renderRoutes(){
  if(!$('#routes'))return;
@@ -1040,7 +765,6 @@ function legBox(r,v){
  return `<div class="eyebrow" style="margin-top:10px">Truck roads</div><div class="cg" style="margin-top:5px">${rows}</div>`}
 function focusRoute(){const r=S.routes[S.ri];if(!r)return;flyTo(fitBounds(),500)}
 /* ---------- pickup point input ---------- */
-const DIRS=['E','NE','N','NW','W','SW','S','SE'];
 function nodeName(n){const k=Math.round(Math.atan2(n.y,n.x)/(Math.PI/4));return `${DIRS[((k%8)+8)%8]} sector, ${Math.round(Math.hypot(n.x,n.y))} km from pad`}
 function reachNodes(){const net=S.net;return net.nodes.filter(n=>n.id!==net.pad&&isFinite(net.dist[n.id])).sort((a,b)=>Math.hypot(a.x,a.y)-Math.hypot(b.x,b.y))}
 function syncPickup(){
@@ -1149,3 +873,5 @@ window.__S=S;
  emit();
 }
 export{S,SP,CARGO,PICKS,MODEL,MORD,COL,LBL,RANK,fmtT,fe,f1,cur,stats,scoreRoute,cnt3,bigPart,PARTS,setDay,setRoute,setMode,select,focusSeg,focusRoute,fitBounds,flyTo,zoomAt,pickSpaceport,loadSpaceport,setOrigin,setWaypoint,setFar,mkFar,isLand,landId,nearestNode,nodeName,reachNodes,setPickMode,pickFromText,saveAnalysis,openHist,hget,hset,renderHist,renderDay,renderStats,renderDetail,renderRoutes,drawOverlay,req,toast,coachShow,monthLabel,legBest,legRec,applyWeather,worstTxt,vehHTML,refHTML,legBox,sparkline,modeBar,noneBanner,weakestIdx,mpp,P,U,mer,wrapL,relPad,scheduleRadar,mmAuth,MODEM,st1,st2,st8,stv1,rl,risk,worst,TS};
+
+bindAI({cur,stats});
