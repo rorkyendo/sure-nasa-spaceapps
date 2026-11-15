@@ -37,6 +37,11 @@ Truck leg options per transfer: ${x?JSON.stringify(x.legs):'n/a'}.
 Daily forecast [label, max mm across corridor] next ${fc.length} days, index 0 = today: ${JSON.stringify(fc)}.
 Monthly rain medians next 12 months (mm, ${x?x.climSrc:'sim'}): ${x?JSON.stringify(x.monthlyMedMm):'n/a'}.
 Nearest tracked event (NASA EONET): ${storm?JSON.stringify(storm):'none'}.`}
+async function aiJSON(user,temperature){const model=await aiModel();
+ const res=await fetch(AIURL+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+aiKey()},body:JSON.stringify({model,messages:[{role:'user',content:user}],temperature})});
+ if(!res.ok)throw new Error('ai '+res.status);
+ const j=await res.json(),txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'').replace(/```json|```/g,'').trim();
+ const a=JSON.parse(txt);a.model=model;return a}
 async function aiAssess(){
  const tok=++aiTok,box=$('#aibox');if(!box)return;
  const sig=aiSig();
@@ -45,15 +50,16 @@ async function aiAssess(){
  if(!key){box.innerHTML='<div class="hint">Add an AI gateway key in <b>Keys</b> (rail, left) for a live model assessment.</div>';return}
  box.innerHTML='<div class="hint">Asking the model…</div>';
  try{
-  const model=await aiModel();if(tok!==aiTok)return;
-  const r=S.routes[S.ri];if(!r)return;
-  const prompt=`You are a NASA logistics risk analyst for spaceport ground supply routes. Respond in STRICT JSON only (no markdown): {"risk":"green|yellow|red","summary":"2-3 sentences, concrete","depart":{"day":"<one of the forecast day labels>","note":"reason, <=12 words"},"stormBrief":"<one sentence on the storm's bearing on this corridor, '' if none>","reason":"why the recommended option wins vs the others, <=20 words","mitigate":"concrete fix for the worst problem segment — alternate leg, staging, or delay; '' if all green","cargo":"one-line handling brief for this cargo class","eta":"confidence band like '4d 8h ±9h — delay driver: port handoff'","seasonal":"best campaign window in the monthly data, <=15 words","pitch":"2-sentence exec summary naming the live data sources (Open-Meteo forecast, OSM/OSRM roads, NASA GIBS IMERG radar, EONET storms, POWER climatology)","tips":["action","action","action"],"weakest":<segment index>}.
-${aiCtxText()}
+  if(!S.routes[S.ri])return;
+  const ctx=aiCtxText();
+  const core=`You are a NASA logistics risk analyst for spaceport ground supply routes. Respond in STRICT JSON only (no markdown): {"risk":"green|yellow|red","summary":"2-3 sentences, concrete","depart":{"day":"<one of the forecast day labels>","note":"reason, <=12 words"},"stormBrief":"<one sentence on the storm's bearing on this corridor, '' if none>","tips":["action","action","action"],"weakest":<segment index>}.
+${ctx}
 For "depart" pick the best departure day weighing rain and the storm.`;
-  const res=await fetch(AIURL+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:.3})});
-  if(!res.ok)throw new Error('ai '+res.status);
-  const j=await res.json(),txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'').replace(/```json|```/g,'').trim();
-  const a=JSON.parse(txt);if(tok!==aiTok)return;a.model=model;if(S.ai)S.aiPrev=S.ai;S.chat=[];S.ai=a;S._aiSig=sig;aiRender(a);
+  const brief=`You are a NASA logistics risk analyst for spaceport ground supply routes. Respond in STRICT JSON only (no markdown): {"reason":"why the recommended option wins vs the others, <=20 words","mitigate":"concrete fix for the worst problem segment — alternate leg, staging, or delay; '' if all green","cargo":"one-line handling brief for this cargo class","eta":"confidence band like '4d 8h ±9h — delay driver: port handoff'","seasonal":"best campaign window in the monthly data, <=15 words","pitch":"2-sentence exec summary naming the live data sources (Open-Meteo forecast, OSM/OSRM roads, NASA GIBS IMERG radar, EONET storms, POWER climatology)"}.
+${ctx}`;
+  const [c1,b1]=await Promise.all([aiJSON(core,.3),aiJSON(brief,.5).catch(()=>({}))]);
+  if(tok!==aiTok)return;
+  const a={...c1,...b1,model:c1.model};if(S.ai)S.aiPrev=S.ai;S.chat=[];S.ai=a;S._aiSig=sig;aiRender(a);
  }catch(e){if(tok!==aiTok)return;box.innerHTML=`<div class="hint">Assessment unavailable (${esc(e.message)}). Check the AI key in Keys.</div>`}
 }
 async function aiChatAsk(q){if(chatBusy)return;const key=aiKey();if(!key)return;
