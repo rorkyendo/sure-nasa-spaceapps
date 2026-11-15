@@ -436,6 +436,12 @@ function stats(){
  let w=sg[0];sg.forEach(s=>{if(RANK[s.k4]>RANK[w.k4]||(RANK[s.k4]===RANK[w.k4]&&s.k1>w.k1))w=s});
  return{N,score:Math.round((1-rr/N)*1000)/10,cnt,weak:w,k7:w.k4};
 }
+function aiCtxData(){const v=cur().v,act=S.routes[S.ri];if(!act)return null;
+ const rows=S.routes.map((r,i)=>{const sc=scoreRoute(r,v),cn=cnt3(r);return{label:r.label,km:+r.len.toFixed(0),min:Math.round(sc.eff),redSegs:cn.r,sel:i===S.ri,rec:i===S.rec}});
+ const sc=scoreRoute(act,v);
+ const legs=(act.legSets||[]).map(ls=>({leg:ls.from+' to '+ls.to,opts:ls.c.map((c,ci)=>({km:+c.km.toFixed(0),min:Math.round(c.eff/60),redSegs:c.segs.filter(s=>s.k4==='r').length,rec:ci===legRec(ls)}))}));
+ return{rows,sc:{baseMin:Math.round(sc.base),weatherMin:Math.round(sc.sat),rainMin:Math.round(sc.rain),redSegs:sc.red,totalMin:Math.round(sc.eff),travel:fmtT(sc.t)},legs,monthlyMedMm:(S.mrain||[]).slice(0,12).map(m=>m[2]),climSrc:S.powerClim?'NASA POWER MERRA-2':'simulated'};
+}
 
 /* ---------- base canvas ---------- */
 function sizeCanvas(){const r=stage.getBoundingClientRect();S.w=Math.max(300,r.width);S.h=Math.max(300,r.height);S.dpr=Math.min(2,window.devicePixelRatio||1);cv.width=S.w*S.dpr;cv.height=S.h*S.dpr;ov.setAttribute('viewBox',`0 0 ${S.w} ${S.h}`)}
@@ -942,4 +948,4 @@ window.__S=S;
 }
 export{S,SP,CARGO,PICKS,MODEL,MORD,COL,LBL,RANK,fmtT,fe,f1,cur,stats,scoreRoute,cnt3,bigPart,PARTS,setDay,setRoute,setMode,select,focusSeg,focusRoute,fitBounds,flyTo,zoomAt,pickSpaceport,loadSpaceport,setOrigin,setWaypoint,setFar,mkFar,isLand,landId,nearestNode,nodeName,reachNodes,setPickMode,pickFromText,saveAnalysis,openHist,hget,hset,renderHist,renderDay,renderStats,renderDetail,renderRoutes,drawOverlay,req,toast,coachShow,monthLabel,legBest,legRec,applyWeather,worstTxt,vehHTML,refHTML,legBox,sparkline,modeBar,noneBanner,weakestIdx,mpp,P,U,mer,wrapL,relPad,scheduleRadar,mmAuth,MODEM,st1,st2,st8,stv1,rl,risk,worst,TS};
 
-bindAI({cur,stats});
+bindAI({cur,stats,ctx:aiCtxData});
