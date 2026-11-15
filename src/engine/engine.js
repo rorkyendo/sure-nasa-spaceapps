@@ -517,9 +517,10 @@ async function fetchEonet(){
 function checkStorm(){
  S.storm=null;
  if(!S.eonet||!S.segs||!S.segs.length)return;
- let bd=650;
+ let best=null,bd=1e9;
  for(const s of S.segs){const q=s.ll&&s.ll[Math.floor(s.ll.length/2)];if(!q)continue;
-  for(const e of S.eonet){const d=hav(q,[e.lon,e.lat]);if(d<bd){bd=d;S.storm={t:e.t,cat:e.cat,km:Math.round(d)}}}}
+  for(const e of S.eonet){const d=hav(q,[e.lon,e.lat]);if(d<bd){bd=d;best=e}}}
+ if(best)S.storm={t:best.t,cat:best.cat,km:Math.round(bd),near:bd<650};
 }
 
 /* ---------- NASA POWER: MERRA-2 climatology for the seasonal (monthly) view ---------- */
@@ -807,7 +808,7 @@ function renderRoutes(){
  <div class="list" style="gap:5px">`+ord.map((o,k)=>`<div class="li rt${o.i===S.ri?' on':''}" data-r="${o.i}"><span class="rk${o.i===S.rec?' best':''}">${o.i===S.rec?'★':k+1}</span><span style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>${o.r.label}</b> <span class="hint"><span>${fe(o.r.len)} km · ${fmtT(o.sc.t,1)}</span></span></span><span class="sp"></span>${bar(o)}<span class="mono" title="Score = travel time in minutes (lower is better)" style="min-width:34px;text-align:right">${fe(o.sc.eff)}</span></div>`).join('')+`</div>
  ${S.pinned&&S.ri!==S.rec?'<button class="btn" id="backrec" style="margin-top:8px;padding:5px 10px;font-size:11.5px">Back to recommended</button>':''}
  <div class="reason">${reason}</div>
- ${S.storm?`<div class="tmwarn" style="border-color:rgba(255,178,84,.55);background:rgba(255,178,84,.1);color:#ffe0b5">⛈ <b>NASA EONET:</b> ${S.storm.t} — ~${fe(S.storm.km)} km from this corridor.</div>`:''}
+ ${S.storm?(S.storm.near?`<div class="tmwarn" style="border-color:rgba(255,178,84,.55);background:rgba(255,178,84,.1);color:#ffe0b5">⛈ <b>NASA EONET:</b> ${S.storm.t} — ~${fe(S.storm.km)} km from this corridor.</div>`:`<div class="hint" style="margin:6px 0 2px">⛈ NASA EONET · ${S.eonet.length} events tracked — nearest: ${S.storm.t}, ${fe(S.storm.km)} km away.</div>`):''}
  <div class="mini"><div><small>Base min</small><b>${f(act,'base')}</b></div><div><small>${nl?'Weather':'Radar'} +min</small><b>${f(act,'sat')}</b></div><div><small>Rain +min</small><b>${f(act,'rain')}</b></div><div><small>Red segs</small><b>${act.sc.red}</b></div><div class="tot"><small>Score min</small><b>${f(act,'eff')}</b></div></div>
  <div class="tline">${tl}</div>
  <div id="aibox" style="margin-top:8px"></div>
