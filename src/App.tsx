@@ -32,7 +32,7 @@ export default function App() {
                 <div className="eyebrow">Mission</div>
                 <div className="fld"><div className="pills" id="pills" /></div>
                 <div className="fld">
-                  <label className="fl" htmlFor="pickText">Pickup point</label>
+                  <label className="flab" htmlFor="pickText">Pickup point</label>
                   <div className="dc truck" id="dragTruck" role="button" tabIndex={0} aria-label="Drag the truck onto the map">
                     <svg id="dockTruck" viewBox="0 0 72 48"><use href="#i-truck-0" /></svg>
                     <span><b>Drag onto the map</b><small>Drop anywhere on land</small></span>
@@ -47,7 +47,7 @@ export default function App() {
                   <datalist id="zones" />
                 </div>
                 <div className="fld">
-                  <label className="fl" htmlFor="cargo">Cargo</label>
+                  <label className="flab" htmlFor="cargo">Cargo</label>
                   <select id="cargo">{CARGO.map((c: string) => <option key={c}>{c}</option>)}</select>
                 </div>
               </div>

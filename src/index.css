@@ -77,7 +77,7 @@ input[type=range]{width:100%;accent-color:var(--cy);margin:6px 0 2px}
 .mcard .eyebrow{margin-bottom:10px}
 .fld{display:flex;flex-direction:column;gap:6px}
 .fld+.fld{border-top:1px solid var(--line2);padding-top:12px;margin-top:12px}
-.fl{font-size:11px;color:var(--mut);letter-spacing:.4px}
+.flab{font-size:11px;color:var(--mut);letter-spacing:.4px}
 .pills{display:flex;flex-direction:column;gap:6px;padding:0}
 .pills .lb{font-size:11px;color:var(--mut)}
 .prow{display:flex;gap:6px}
