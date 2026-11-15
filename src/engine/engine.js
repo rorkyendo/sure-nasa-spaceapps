@@ -398,8 +398,8 @@ function genRain(){
 function genMonthly(){
  const sp=S.sp,R=rng(sp.seed*733+3),pk=PEAK[sp.id]??6,out=[];
  const fo=.75+((OK()*37+(S.wp||0)*11)%10)/10*.6,fm=.8+((OK()*13+(S.wp||0)*29)%10)/10*.5;
- const m0=new Date().getUTCMonth();
- for(let m=0;m<60;m++){const mo=(m0+m)%12,s=.5+.5*Math.cos(2*Math.PI*(mo-pk)/12),base=sp.clim*(8+40*Math.pow(s,1.6))*(.8+R()*.45);out.push([Math.round(base*fo),Math.round(base*fm),Math.round(base)])}
+ const m0=new Date().getUTCMonth(),pc=S.powerClim,pmn=pc?Math.min(...pc):0,pmx=pc?Math.max(...pc)-pmn:1;
+ for(let m=0;m<60;m++){const mo=(m0+m)%12,s=pc?(pc[mo]-pmn)/(pmx||1):.5+.5*Math.cos(2*Math.PI*(mo-pk)/12),base=sp.clim*(8+40*Math.pow(s,1.6))*(.8+R()*.45);out.push([Math.round(base*fo),Math.round(base*fm),Math.round(base)])}
  return out;
 }
 /* ---------- live rain: Open-Meteo (K8 daily), sim fallback ---------- */
@@ -479,25 +479,59 @@ function drawBase(){
 }
 const mpp=lat=>156543.03392*Math.cos(((lat==null?S.view.lat:lat)*Math.PI)/180)/Math.pow(2,S.view.z);
 
-/* ---------- live rain radar: Meteomatics WMS (user-supplied login, stays in browser) ---------- */
+/* ---------- live rain radar: NASA GIBS IMERG (keyless); Meteomatics WMS optional upgrade ---------- */
 const mmAuth=()=>{try{return localStorage.getItem('sure_mm_auth_v1')||''}catch(e){return''}};
 const m385=(lon,lat)=>[lon*20037508.34/180,Math.log(Math.tan(Math.PI/4+Math.max(-85.05,Math.min(85.05,lat))*Math.PI/360))*6378137];
 let radarTok=0,radarT=null;const radarCache=new Map();
 function radarDate(){const d=S.rainDates&&S.rainDates[S.day];return(d||new Date(Date.now()+S.day*864e5).toISOString().slice(0,10))+'T12:00:00Z'}
+function imergTime(){const d=new Date(Date.now()-5*36e5);d.setUTCMinutes(Math.floor(d.getUTCMinutes()/30)*30,0,0);return d.toISOString().slice(0,19)+'Z'}
 function scheduleRadar(){
  const tog=$('#togRadar'),lb=$('#radarLbl'),auth=mmAuth();
- if(lb)lb.textContent=auth?'Rain radar · live':'Rain radar · key via Keys';
- if(!tog||!tog.checked||MODEM()||!auth){if(S.radar){S.radar=null;req()}return}
+ if(lb)lb.textContent=auth?'Rain radar · Meteomatics':'Rain radar · NASA GIBS IMERG';
+ if(!tog||!tog.checked||MODEM()){if(S.radar){S.radar=null;req()}return}
  clearTimeout(radarT);radarT=setTimeout(()=>{
   const tok=++radarTok,nw=U(0,0),se=U(S.w,S.h);
   const[x0,y0]=m385(nw[0],se[1]),[x1,y1]=m385(se[0],nw[1]);
-  const ci=auth.indexOf(':'),au=ci<0?'https://':('https://'+encodeURIComponent(auth.slice(0,ci))+':'+encodeURIComponent(auth.slice(ci+1))+'@');
-  const url=au+'api.meteomatics.com/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=precip_1h:mm&CRS=EPSG:3857&BBOX='+x0.toFixed(0)+','+y0.toFixed(0)+','+x1.toFixed(0)+','+y1.toFixed(0)+'&WIDTH='+Math.min(1600,Math.round(S.w))+'&HEIGHT='+Math.min(1200,Math.round(S.h))+'&FORMAT=image/png&TRANSPARENT=TRUE&TIME='+encodeURIComponent(radarDate());
+  const wh='&WIDTH='+Math.min(1600,Math.round(S.w))+'&HEIGHT='+Math.min(1200,Math.round(S.h));let url;
+  if(auth){const ci=auth.indexOf(':'),au=ci<0?'https://':('https://'+encodeURIComponent(auth.slice(0,ci))+':'+encodeURIComponent(auth.slice(ci+1))+'@');
+   url=au+'api.meteomatics.com/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=precip_1h:mm&CRS=EPSG:3857&BBOX='+x0.toFixed(0)+','+y0.toFixed(0)+','+x1.toFixed(0)+','+y1.toFixed(0)+wh+'&FORMAT=image/png&TRANSPARENT=TRUE&TIME='+encodeURIComponent(radarDate())}
+  else url='https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=IMERG_Precipitation_Rate&CRS=EPSG:3857&BBOX='+x0.toFixed(0)+','+y0.toFixed(0)+','+x1.toFixed(0)+','+y1.toFixed(0)+wh+'&FORMAT=image/png&TRANSPARENT=TRUE&TIME='+encodeURIComponent(imergTime());
   const ch=radarCache.get(url);if(ch){S.radar={im:ch,nw,se};req();return}
   const im=new Image();im.onload=()=>{if(radarCache.size>24)radarCache.clear();radarCache.set(url,im);if(tok===radarTok){S.radar={im,nw,se};req()}};im.src=url;
  },550);
 }
 window.SUREMMCHANGE=()=>{radarCache.clear();S.radar=null;scheduleRadar()};
+
+/* ---------- NASA EONET: live natural events (severe storms, floods) ---------- */
+async function fetchEonet(){
+ try{const r=await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=60');
+  if(!r.ok)return;const j=await r.json();
+  S.eonet=(j.events||[]).map(e=>{
+   const gs=e.geometry||[];if(!gs.length)return null;
+   const c=gs[gs.length-1].coordinates,p=typeof c[0]==='number'?c:c[0];
+   const cat=(e.categories&&e.categories[0]&&e.categories[0].title)||'';
+   return{t:String(e.title||'Event').replace(/[<>&]/g,''),cat,lon:p[0],lat:p[1]};
+  }).filter(Boolean).filter(e=>/Severe Storms|Floods/i.test(e.cat));
+  checkStorm();if(S.routes&&S.routes.length)renderRoutes();req();
+ }catch(e){}}
+function checkStorm(){
+ S.storm=null;
+ if(!S.eonet||!S.segs||!S.segs.length)return;
+ let bd=650;
+ for(const s of S.segs){const q=s.ll&&s.ll[Math.floor(s.ll.length/2)];if(!q)continue;
+  for(const e of S.eonet){const d=hav(q,[e.lon,e.lat]);if(d<bd){bd=d;S.storm={t:e.t,cat:e.cat,km:Math.round(d)}}}}
+}
+
+/* ---------- NASA POWER: MERRA-2 climatology for the seasonal (monthly) view ---------- */
+let pwTok=0;
+async function fetchPowerClim(){
+ const tok=++pwTok,sp=S.sp;if(!sp)return;
+ try{const r=await fetch(`https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=PRECTOTCORR&community=RE&longitude=${sp.lon.toFixed(3)}&latitude=${sp.lat.toFixed(3)}&format=JSON`);
+  if(!r.ok)return;const j=await r.json(),p=j.properties&&j.properties.parameter&&j.properties.parameter.PRECTOTCORR;if(!p)return;
+  const arr=MON.map(m=>p[m.toUpperCase()]);if(arr.some(v=>typeof v!=='number'))return;
+  if(tok!==pwTok||S.sp!==sp)return;S.powerClim=arr;
+  S.mrain=genMonthly();renderDay();
+ }catch(e){}}
 
 /* ---------- SVG overlay ---------- */
 const dPath=pts=>{let d='',pen=false;for(const q of pts){const p=P(q[0],q[1]);if(p[2]<0){pen=false;continue}d+=(pen?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)+' ';pen=true}return d||'M-9 -9'};
@@ -550,6 +584,9 @@ function drawOverlay(){
   h+=`<g transform="translate(${lx},${pad[1]-70})"><rect x="-58" y="-13" width="116" height="18" rx="9" fill="#06202c" stroke="#35e0ee" stroke-opacity=".7"/><text text-anchor="middle" y="0" fill="#bff6fb" font-size="10.5" font-family="monospace" style="paint-order:normal;stroke:none">${S.sp.name.toUpperCase()}</text></g>`;
   h+=`<g transform="translate(${ox2},${o[1]+30})"><rect x="-74" y="-13" width="148" height="18" rx="9" fill="#2a1d0b" stroke="#ffb454" stroke-opacity=".7"/><text text-anchor="middle" y="0" fill="#ffe0b5" font-size="10" font-family="monospace" style="paint-order:normal;stroke:none">${S.cargo.replace(/ \(.*\)$/,'')}</text></g>`;
  }
+ if(S.eonet)S.eonet.forEach(e=>{const[x,y]=P(e.lon,e.lat);if(x<-50||y<-50||x>S.w+50||y>S.h+50)return;
+  const near=S.storm&&S.storm.t===e.t;
+  h+=`<g class="storm${near?' near':''}"><path d="M${x-4.5} ${y+5.5}l4-9 1.5 4.5h3l-4 9-1.5-4.5z" fill="${near?'#ffd23f':'#ffb454'}" stroke="#14100a" stroke-width=".9"/>${(z>=4.5||near)?`<text x="${x+8}" y="${y+3}" font-size="9" font-family="monospace" fill="${near?'#ffe08a':'#d8a860'}">${e.t.length>30?e.t.slice(0,28)+'…':e.t}</text>`:''}</g>`});
  if(S.snap){const q=S.snap,c=q.ok?(q.kind==='truck'?'#ffb454':'#35e0ee'):'#ff4d5e';h+=`<line x1="${q.x}" y1="${q.y}" x2="${q.nx}" y2="${q.ny}" stroke="${c}" stroke-dasharray="4 4" stroke-width="2"/><circle cx="${q.nx}" cy="${q.ny}" r="15" fill="none" stroke="${c}" stroke-width="2.5"/>`}
  ov.innerHTML=h;
 }
@@ -628,7 +665,7 @@ function renderDay(){
  $('#fday').textContent=c.l;
  $('#fsel').textContent=M?'Selected month':'Selected day';
  $('#fttl').textContent=M?'Monthly rain outlook, up to 5 years. Slide the month.':'Daily rain forecast';
- $('#fnote').textContent=M?'Beyond about two weeks no weather forecast exists. These bars show the typical heavy-rain day for each month, built from the seasonal pattern at this spaceport (simulated here). Use them to pick a launch-campaign window, not a delivery day.':('This is a weather forecast, not a radar measurement. Segment colours stay based on the latest satellite pass. The slider only changes the rain forecast and the wet-prone markers. '+(S.rainSrc==='live'?'Forecast: Open-Meteo, live.':'Forecast: simulated (Open-Meteo unreachable, fallback).'));
+ $('#fnote').textContent=M?'Beyond about two weeks no weather forecast exists. These bars show the typical heavy-rain day for each month, built from '+(S.powerClim?'NASA POWER climatology (MERRA-2) at this spaceport — shape is real, values scaled':'the seasonal pattern at this spaceport (simulated)')+'. Use them to pick a launch-campaign window, not a delivery day.':('This is a weather forecast, not a radar measurement. Segment colours stay based on the latest satellite pass. The slider only changes the rain forecast and the wet-prone markers. '+(S.rainSrc==='live'?'Forecast: Open-Meteo, live.':'Forecast: simulated (Open-Meteo unreachable, fallback).'));
  $('#fnote').innerHTML='<details class="calc"><summary>About this forecast</summary><p>'+$('#fnote').textContent+'</p></details>';
  const wetN=S.segs.filter(s=>s.wet).length;
  $('#fread').innerHTML=`<div class="row" style="margin:4px 0"><span class="st ${k}">${LBL[k]}</span><b style="font-size:18px">${v} mm</b></div>
@@ -660,8 +697,8 @@ function setDay(d){const before=S.ri,bm=S.tmCur;S.pinned=false;S.day=d;scheduleR
 function nearestNode(lon,lat,excl){const net=S.net,x=(lon-net.lon0)*net.kx,y=(lat-net.lat0)*net.ky;let b=1e9,id=-1;for(const n of net.nodes){if(n.id===net.pad||n.id===excl||!isFinite(net.dist[n.id]))continue;const d=Math.hypot(n.x-x,n.y-y);if(d<b){b=d;id=n.id}}return{id,km:b}}
 function defaultOrigin(net){let b=null,bd=1e9;const target=Math.min(26,Math.max(...net.nodes.filter(n=>isFinite(net.dist[n.id])).map(n=>Math.hypot(n.x,n.y)))*.85);net.nodes.forEach(n=>{if(!isFinite(net.dist[n.id])||n.id===0)return;const d=Math.abs(Math.hypot(n.x,n.y)-target)+(n.x>0?4:0);if(d<bd){bd=d;b=n.id}});return b}
 function loadSpaceport(id,instant){
- S.sp=SP.find(s=>s.id===id);S.net=genNet(S.sp);S.origin=demoOrigin();S.wp=null;S.roadWx=null;{const f=PICKS.find(p=>p[0]==={ksc:'Houston, USA',biak:'Jakarta, Indonesia'}[id]);S.far=f?mkFar(f[1],f[2],f[0]):null}
- S.pinned=false;recomputeUI(instant);upgradeOSMNet(S.sp);
+ S.sp=SP.find(s=>s.id===id);S.net=genNet(S.sp);S.origin=demoOrigin();S.wp=null;S.roadWx=null;S.powerClim=null;{const f=PICKS.find(p=>p[0]==={ksc:'Houston, USA',biak:'Jakarta, Indonesia'}[id]);S.far=f?mkFar(f[1],f[2],f[0]):null}
+ S.pinned=false;recomputeUI(instant);upgradeOSMNet(S.sp);fetchPowerClim();
 }
 async function recomputeUI(instant,keepView){
  const tok=++anaTok;
@@ -755,6 +792,7 @@ function cnt3(r){const c={g:0,y:0,r:0};r.segs.forEach(s=>c[s.k4]++);return c}
 function bigPart(a,b){const d={base:a.base-b.base,sat:a.sat-b.sat,rain:a.rain-b.rain};let k='base',m=-1e9;for(const x in d)if(d[x]>m){m=d[x];k=x}return{k,v:m}}
 function renderRoutes(){
  if(!$('#routes'))return;
+ checkStorm();
  if(!S.routes.length){if(S.far&&S.mi){$('#routes').innerHTML=`<div class="eyebrow">Route options</div>${modeBar()}<div class="hint" style="margin-top:6px">No route is drawn because no transport mode is possible and safe for this pickup.</div>`;$('#detail').innerHTML='<div class="empty">No route to show.</div>';$('#mapEyebrow').textContent='NO RECOMMENDED ROUTE · '+S.far.name}return}
  const c=cur(),v=c.v,lv=rl(v),rows=S.routes.map((r,i)=>({r,i,sc:scoreRoute(r,v),cn:cnt3(r)})),ord=[...rows].sort((a,b)=>a.sc.eff-b.sc.eff),rec=rows[S.rec],act=rows[S.ri],two=act.i!==rec.i,fast=[...rows].sort((a,b)=>a.sc.t-b.sc.t)[0],f=(a,k)=>fe(a.sc[k]);
  const nl=!!(S.far&&act.r.mode&&act.r.mode!=='land'),PN=k=>nl&&k==='sat'?'rougher weather along the route':PARTS[k];
@@ -769,6 +807,7 @@ function renderRoutes(){
  <div class="list" style="gap:5px">`+ord.map((o,k)=>`<div class="li rt${o.i===S.ri?' on':''}" data-r="${o.i}"><span class="rk${o.i===S.rec?' best':''}">${o.i===S.rec?'★':k+1}</span><span style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>${o.r.label}</b> <span class="hint"><span>${fe(o.r.len)} km · ${fmtT(o.sc.t,1)}</span></span></span><span class="sp"></span>${bar(o)}<span class="mono" title="Score = travel time in minutes (lower is better)" style="min-width:34px;text-align:right">${fe(o.sc.eff)}</span></div>`).join('')+`</div>
  ${S.pinned&&S.ri!==S.rec?'<button class="btn" id="backrec" style="margin-top:8px;padding:5px 10px;font-size:11.5px">Back to recommended</button>':''}
  <div class="reason">${reason}</div>
+ ${S.storm?`<div class="tmwarn" style="border-color:rgba(255,178,84,.55);background:rgba(255,178,84,.1);color:#ffe0b5">⛈ <b>NASA EONET:</b> ${S.storm.t} — ~${fe(S.storm.km)} km from this corridor.</div>`:''}
  <div class="mini"><div><small>Base min</small><b>${f(act,'base')}</b></div><div><small>${nl?'Weather':'Radar'} +min</small><b>${f(act,'sat')}</b></div><div><small>Rain +min</small><b>${f(act,'rain')}</b></div><div><small>Red segs</small><b>${act.sc.red}</b></div><div class="tot"><small>Score min</small><b>${f(act,'eff')}</b></div></div>
  <div class="tline">${tl}</div>
  <div id="aibox" style="margin-top:8px"></div>
@@ -894,6 +933,7 @@ sizeCanvas();
 renderHist();
 if(window.SUREDB)SUREDB.pull().then(r=>{hset(SUREDB.merge(hget(),r));renderHist()}).catch(()=>{});
 loadSpaceport('ksc',true);
+fetchEonet();setInterval(fetchEonet,12e5);
 setTimeout(coachShow,500);
 window.__S=S;
  emit();
