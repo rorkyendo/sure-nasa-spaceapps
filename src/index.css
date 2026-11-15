@@ -121,6 +121,7 @@ input[type=range]{width:100%;accent-color:var(--cy);margin:6px 0 2px}
 .pin.hot .halo{stroke:var(--g);stroke-opacity:1;fill:rgba(47,228,138,.3)}
 .pin.on .halo{stroke:var(--g);fill:rgba(47,228,138,.2);stroke-opacity:1}
 .pin text{fill:#d6e6ff;font-size:10.5px;font-family:"SF Mono",ui-monospace,monospace;paint-order:stroke;stroke:#050d1c;stroke-width:3px}
+.term text{paint-order:stroke;stroke:#050d1c;stroke-width:3px}
 .seg{cursor:pointer}
 .seg .core{stroke-linecap:round}
 .wet{fill:none;stroke:var(--bl);stroke-width:17;stroke-opacity:0;stroke-dasharray:3 6;transition:stroke-opacity .3s;pointer-events:none;stroke-linecap:round}

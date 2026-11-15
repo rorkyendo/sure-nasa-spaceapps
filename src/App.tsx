@@ -115,7 +115,7 @@ export default function App() {
                 </div>
                 <div className="hint2" id="hint2">Drag the truck or type a city · ○ airport · ◆ port</div>
                 <div className="scale" id="scale" />
-                <div className="credit">Sea routes: water-graph A* on Natural Earth coast (not measured lanes) · waves: Open-Meteo Marine · roads: OSM·OSRM else simulated · radar values simulated · imagery: NASA GIBS VIIRS · map: © OSM/CARTO</div>
+                <div className="credit">Sea routes: water-graph A* on Natural Earth coast (not measured lanes) · waves: Open-Meteo Marine · roads: OSM·OSRM else simulated · radar values simulated · imagery: NASA GIBS VIIRS · map: © OpenStreetMap contributors · labels: CARTO</div>
                 <div className="coach" id="coach" aria-hidden="true">
                   <svg className="ctr"><line id="ctl" x1="0" y1="0" x2="0" y2="0" stroke="#35e0ee" strokeWidth="3" strokeDasharray="2 9" strokeLinecap="round" /></svg>
                   <div className="cr" id="ccr" />

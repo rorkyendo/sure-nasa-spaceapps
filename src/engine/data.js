@@ -45,7 +45,7 @@ const GD=new Date(Date.now()-2*864e5).toISOString().slice(0,10);
 const GIBS='https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+GD+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
 const TILESETS={
  sat:[{u:GIBS,mz:9}],
- osm:['https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],
+ osm:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
  hyb:[{u:GIBS,mz:9},'https://basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png']
 };
 const HK='sure_history_v1';

@@ -423,8 +423,8 @@ function stats(){
 
 /* ---------- base canvas ---------- */
 function sizeCanvas(){const r=stage.getBoundingClientRect();S.w=Math.max(300,r.width);S.h=Math.max(300,r.height);S.dpr=Math.min(2,window.devicePixelRatio||1);cv.width=S.w*S.dpr;cv.height=S.h*S.dpr;ov.setAttribute('viewBox',`0 0 ${S.w} ${S.h}`)}
-/* ---------- base canvas: real map tiles (Esri / OSM Carto / hybrid) ---------- */
-if(!S.base)S.base='sat';
+/* ---------- base canvas: real map tiles (NASA GIBS / OpenStreetMap / hybrid) ---------- */
+if(!S.base)S.base='osm';
 const tcache=new Map();
 function tileAt(u,tz,tx,ty){
  const k=u+tz+'/'+tx+'/'+ty,t=tcache.get(k);if(t===null)return null;if(t)return t.complete&&t.naturalWidth?t:null;
