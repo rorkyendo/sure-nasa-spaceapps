@@ -10,7 +10,7 @@ const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','
 async function aiModel(){if(aiModelId)return aiModelId;
  const r=await fetch(AIURL+'/models',{headers:{Authorization:'Bearer '+aiKey()}});if(!r.ok)throw new Error('models '+r.status);
  const j=await r.json(),m=(j.data||[]).map(d=>d.id).filter(id=>!/image|embed|tts|whisper/i.test(id));
- aiModelId=m.find(id=>/flash/i.test(id))||m[0];return aiModelId}
+ aiModelId=m.find(id=>/^gemini-3\.8-flash$/i.test(id))||m.find(id=>/3\.8-flash-tiered/i.test(id))||m.find(id=>/flash/i.test(id))||m[0];return aiModelId}
 function aiRender(a){const box=$('#aibox');if(!box)return;
  box.innerHTML=`<div class="airow ${a.risk}"><span class="aib">${({green:'LOW',yellow:'MODERATE',red:'HIGH'})[a.risk]||'—'}</span><p>${esc(a.summary)}</p>${(a.tips||[]).map(t=>`<div class="tip">· ${esc(t)}</div>`).join('')}<div class="hint" style="margin-top:4px">${esc(a.model||'model')} · live gateway assessment</div></div>`}
 function aiSig(){return JSON.stringify([S.sp&&S.sp.id,S.origin,S.far&&S.far.name,S.day,S.cargo,S.routes.length,S.ri,S.len&&S.len.toFixed(0)])}
