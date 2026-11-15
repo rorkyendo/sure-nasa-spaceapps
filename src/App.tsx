@@ -97,8 +97,9 @@ export default function App() {
                 <label className="tog"><input type="checkbox" id="togRadar" defaultChecked /> <span id="radarLbl">Rain radar</span></label>
                 <div className="sp" />
                 <div className="leg segctl" id="bmap" role="group" aria-label="Basemap layer">
-                  <button className="bm on" data-b="sat" type="button">Satellite</button>
-                  <button className="bm" data-b="osm" type="button">OSM</button>
+                  <button className="bm" data-b="sat" type="button">Satellite</button>
+                  <button className="bm on" data-b="osm" type="button">OSM</button>
+                  <button className="bm" data-b="gmap" type="button">Google</button>
                   <button className="bm" data-b="hyb" type="button">Hybrid</button>
                 </div>
               </div>

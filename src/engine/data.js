@@ -46,6 +46,7 @@ const GIBS='https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_Correc
 const TILESETS={
  sat:[{u:GIBS,mz:9}],
  osm:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+ gmap:['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'],
  hyb:[{u:GIBS,mz:9},'https://basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png']
 };
 const HK='sure_history_v1';
