@@ -174,6 +174,14 @@ export default function App() {
         <div className="hint" id="aistat" style={{ marginTop: 8 }} />
       </div></div>
 
+      <div className="load" id="load" hidden>
+        <div className="loadcard" role="status" aria-live="polite" aria-label="Route analysis in progress">
+          <div className="ld-top"><span className="ld-dot" aria-hidden="true" /><span className="ld-eyebrow">Route analysis</span><b className="mono" id="ldPct">0%</b></div>
+          <div className="ld-track"><div className="ld-fill" id="ldFill" /></div>
+          <div className="ld-sub"><span id="ldStage">Resolving pickup</span><span className="ld-hint">land · sea · air</span></div>
+        </div>
+      </div>
+
       <div className="toast" id="toast" />
     </>
   );

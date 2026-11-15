@@ -3,7 +3,7 @@
 import './geo-data.js';
 import{sub,ver,emit,S}from'./state.js';
 import{$,$$,COL,LBL,RANK,f1,fe,fmtT,rng,H,VN,W,rl,st1,st2,st8,stv1,worst,risk,hv,RAD,toV,fromV,vcross,vdot,hav,unw,wrapL,mer,merYinv,MONn,monthLabel}from'./util.js';
-import{SP,CARGO,PICKS,DATES,DAYS,DSH,setDayLabels,AIRPORTS,PORTS,ALLT,TERM,DOC,VREF,MODEL,MORD,MODEV,SEAVIA,SEACCESS,PARTS,PEAK,OPS,OPQ,TILESETS,HK,DIRS}from'./data.js';
+import{SP,CARGO,PICKS,DAYS,DSH,setDayLabels,AIRPORTS,PORTS,ALLT,TERM,DOC,VREF,MODEL,MORD,MODEV,SEAVIA,SEACCESS,PARTS,PEAK,OPS,OPQ,TILESETS,HK,DIRS}from'./data.js';
 import{L110,L50,L10,relPad,isLandIn,isLand,isLand10,landId,seaMask,fineMask,mkWaterFast,segWater,waterFrac,chaikinW,seaGraph,seaAStar,seaPaths,waterReady,gcPts,chaikin,viaPoly,arcPoly,polyKm,landFrac,unwrapBack,modeBlobs}from'./geo.js';
 import{legPolys,legSegs,mkLegSet,legAcc,legBest,legRec,mkModeRoute,modeAlts,applyWeather,worstTxt,fetchSeaWx,seaWxAt}from'./routes.js';
 import{queueAI,routeSrcTag,bindAI}from'./ai.js';
@@ -172,15 +172,17 @@ function farGeom(sp,p,tryN){
   return{idx:ri,label:'Route '+Lb[ri],short:Lb[ri],custom:false,far:true,nodes:[],segs,len:Lt,at:null,atLL:f=>atKm(Lt*f),polyLL:poly,midLL:atKm(Lt/2)}});
  return{routes,blobs,Dk};
 }
-function buildFar(){
+async function buildFar(tok){
  const sp=S.sp,p=S.far;let best=null;
- for(let t=0;t<30;t++){const g=farGeom(sp,p,t);if(!best)best=g;
+ for(let t=0;t<30;t++){if(anaTok!==tok)return[];
+  const g=farGeom(sp,p,t);if(!best)best=g;
   const rec=v=>{let b=0,m=1e9;g.routes.forEach((r,i)=>{const e=scoreRoute(r,v).eff;if(e<m){m=e;b=i}});return b};
-  if(rec(5)!==rec(60)&&rec(5)!==rec(40)){best=g;break}}
+  if(rec(5)!==rec(60)&&rec(5)!==rec(40)){best=g;break}
+  ldPct(Math.min(40,14+t));await tick()}
  S.farBlobs=best.blobs;return best.routes}
-function setFar(p){
+async function setFar(p){
  if(hav([p.lon,p.lat],[S.sp.lon,S.sp.lat])<8){toast('That is almost at the spaceport. Pick a point farther away.');drawOverlay();return}
- S.far=p;S.wp=null;S.pinned=false;recomputeUI(false,false);
+ S.far=p;S.wp=null;S.pinned=false;await recomputeUI(false,false);
  toast(`Pickup: ${p.name}. Recommended transport: ${S.recM?MODEL[S.recM]:'none, no safe mode'}.`)}
 
 /* ---------- transport modes: land, sea, air ---------- */
@@ -206,14 +208,24 @@ function buildTM(mode,list,maxKm,B,noun,sp,p,Dk){
  out.routes=best.routes;out.blobs=best.blobs;out.ok=true;return out}
 function mkIds(sp,p){const a=H(p.h,sp.seed,9),b=H(p.h,sp.seed,10),c=H(p.h,sp.seed,11),d=H(p.h,sp.seed,12);
  return{call:'SRE'+(100+Math.floor(a*900)),hex:(0xA00000+Math.floor(b*0x0fffff)).toString(16).toUpperCase(),imo:'9'+String(100000+Math.floor(c*899999)),mmsi:(sp.id==='ksc'?'366':'525')+String(100000+Math.floor(d*899999)),ship:'MV SURE Carrier'}}
-function buildModes(){
+/* ---------- analysis progress modal ---------- */
+let anaTok=0,loadT0=0;
+const tick=()=>new Promise(r=>requestAnimationFrame(()=>r()));
+function ldPct(p,t){const P=$('#ldPct'),F=$('#ldFill');if(P)P.textContent=Math.round(p)+'%';if(F)F.style.width=p+'%';if(t){const s=$('#ldStage');if(s)s.textContent=t}}
+function loadOn(name){const L=$('#load');if(!L)return;loadT0=performance.now();L.hidden=false;L.classList.remove('done');L.classList.add('show');ldPct(4,'Resolving pickup — '+name);const rs=$('#routes');if(rs)rs.innerHTML='<div class="eyebrow">Route options</div><div class="sk"></div><div class="sk"></div><div class="sk"></div>'}
+function loadOff(){const L=$('#load');if(!L)return;ldPct(100,'Analysis complete');L.classList.add('done');setTimeout(()=>{L.classList.remove('show','done');L.hidden=true},Math.max(380,850-(performance.now()-loadT0)))}
+async function buildModes(tok){
  const sp=S.sp,p=S.far,Dk=hav([p.lon,p.lat],[sp.lon,sp.lat]),G={};
- const lr=buildFar(),land={routes:lr,blobs:S.farBlobs,ok:lr.length>0,why:lr.length?'':'no continuous land path in this mockup, every path crosses water'};
+ ldPct(14,'Land arcs — candidate corridors');await tick();if(anaTok!==tok)return;
+ const lr=await buildFar(tok);if(anaTok!==tok)return;const land={routes:lr,blobs:S.farBlobs,ok:lr.length>0,why:lr.length?'':'no continuous land path in this mockup, every path crosses water'};
  lr.forEach(r=>{r.mode='land';r.label='Land '+r.short;r.legKm=0;r.fixedH=0;r.legH=0;r.segs.forEach(s=>{s.mode='land'})});
  if(landId(p.lon,p.lat)!==landId(sp.lon,sp.lat)){land.ok=false;land.why='no road link, a different landmass'}
  G.land=land;const T=TERM[sp.id];
+ ldPct(42,'Air corridors — documented terminals');await tick();if(anaTok!==tok)return;
  G.air=buildTM('air',AIRPORTS,500,AIRPORTS.find(a=>a.c===T[0]),'airport',sp,p,Dk);
+ ldPct(64,'Water corridor — A* over coast grid');await tick();if(anaTok!==tok)return;
  G.sea=buildTM('sea',PORTS,500,PORTS.find(a=>a.c===T[1]),'port',sp,p,Dk);
+ ldPct(90,'Scoring and ranking options');await tick();if(anaTok!==tok)return;
  G.ids=mkIds(sp,p);S.geo=G;S.seaWx=null;
  if(G.sea&&G.sea.routes&&G.sea.routes.length)fetchSeaWx(G.sea.routes[0]).then(()=>{if(S.seaWx){refreshModes();renderDay()}req()})}
 /* ---------- live sea state: Open-Meteo Marine (free, keyless) ---------- */
@@ -309,9 +321,9 @@ function refreshRec(){
  S.routes.forEach((r,i)=>{const e=scoreRoute(r,v).eff;if(e<bs-1e-9){bs=e;best=i}});S.rec=best;
  if(!S.pinned&&S.ri!==best){S.ri=best;applyRoute(S.routes[best]);return true}return false;
 }
-function buildRoutes(){
+async function buildRoutes(tok){
  const net=S.net;S.rain=genRain();S.mrain=genMonthly();S.rainSrc='sim';S.routeSrc='sim';refreshLiveRain();
- if(S.far){S.wp=null;S.pinned=false;S.ri=-1;buildModes();S.tmCur=null;S.tmUser=null;S.routes=[];refreshModes();refreshRec();return}
+ if(S.far){S.wp=null;S.pinned=false;S.ri=-1;await buildModes(tok);if(anaTok!==tok)return;S.tmCur=null;S.tmUser=null;S.routes=[];refreshModes();refreshRec();return}
  else{S.farBlobs=null;S.geo=null;S.mi=null;S.tmCur=null;S.tmUser=null}
  const L='ABCDE';S.routes=pathsK(net,S.origin,5,net.real?edgeHz:null).map((p,i)=>makeRoute(p,i,'Route '+L[i],L[i],false));
  S.pinned=S.wp!=null;S.ri=-1;
@@ -386,11 +398,15 @@ function genRain(){
 function genMonthly(){
  const sp=S.sp,R=rng(sp.seed*733+3),pk=PEAK[sp.id]??6,out=[];
  const fo=.75+((OK()*37+(S.wp||0)*11)%10)/10*.6,fm=.8+((OK()*13+(S.wp||0)*29)%10)/10*.5;
- for(let m=0;m<60;m++){const mo=(10+m)%12,s=.5+.5*Math.cos(2*Math.PI*(mo-pk)/12),base=sp.clim*(8+40*Math.pow(s,1.6))*(.8+R()*.45);out.push([Math.round(base*fo),Math.round(base*fm),Math.round(base)])}
+ const m0=new Date().getUTCMonth();
+ for(let m=0;m<60;m++){const mo=(m0+m)%12,s=.5+.5*Math.cos(2*Math.PI*(mo-pk)/12),base=sp.clim*(8+40*Math.pow(s,1.6))*(.8+R()*.45);out.push([Math.round(base*fo),Math.round(base*fm),Math.round(base)])}
  return out;
 }
 /* ---------- live rain: Open-Meteo (K8 daily), sim fallback ---------- */
 let rainTok=0;
+const WDN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function todayLabels(){const a=[],b=[];for(let i=0;i<8;i++){const d=new Date(Date.now()+i*864e5);a.push(`${WDN[d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`);b.push(`${WDN[d.getUTCDay()]} ${d.getUTCDate()}`)}return[a,b]}
+function setDatePill(){const p=$('#datePill');if(!p)return;const d=new Date();p.textContent=`${WDN[d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`.toUpperCase()}
 function llOrigin(){if(S.far)return[S.far.lat,S.far.lon];const n=S.net&&S.net.nodes.find(n=>n.id===S.origin);return n?[n.ll[1],n.ll[0]]:null}
 function rainPoints(){
  const o=llOrigin();if(!o)return null;
@@ -404,9 +420,9 @@ async function refreshLiveRain(){
   const r=await fetch(url);if(!r.ok)throw 0;
   const j=await r.json(),arr=Array.isArray(j)?j:[j];
   if(tok!==rainTok||arr.length!==3||!arr[0].daily||!arr[0].daily.time)throw 0;
-  const dates=arr[0].daily.time;S.rainDates=dates;const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  setDayLabels(dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]}`}),
-   dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WD[d.getUTCDay()]} ${d.getUTCDate()}`}));
+  const dates=arr[0].daily.time;S.rainDates=dates;
+  setDayLabels(dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WDN[d.getUTCDay()]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}`}),
+   dates.map(t=>{const d=new Date(t+'T00:00:00Z');return `${WDN[d.getUTCDay()]} ${d.getUTCDate()}`}));
   S.rain=dates.map((_,d)=>arr.map(a=>Math.round((a.daily.precipitation_sum[d]||0)*10)/10));
   S.rainSrc='live';renderDay();
  }catch(e){/* keep simulated values */}
@@ -575,7 +591,7 @@ function sparkline(s){
  o+=`<rect x="${px}" y="${Y(3)}" width="${w-px-12}" height="${Y(0)-Y(3)}" fill="#2fe48a" opacity=".08"/><rect x="${px}" y="${Y(6)}" width="${w-px-12}" height="${Y(3)-Y(6)}" fill="#ffd23f" opacity=".08"/><rect x="${px}" y="${Y(9)}" width="${w-px-12}" height="${Y(6)-Y(9)}" fill="#ff4d5e" opacity=".08"/>`;
  [0,3,6,9].forEach(v=>{o+=`<text x="${px-5}" y="${Y(v)+3}" text-anchor="end" fill="#8996b6" font-size="8.5">${v}</text><line x1="${px}" x2="${w-12}" y1="${Y(v)}" y2="${Y(v)}" stroke="#2a3a60" stroke-dasharray="2 3"/>`});
  o+=`<polyline fill="none" stroke="#35e0ee" stroke-width="2" points="${s.ser.map((v,j)=>X(j)+','+Y(v)).join(' ')}"/>`;
- s.ser.forEach((v,j)=>{o+=`<circle cx="${X(j)}" cy="${Y(v)}" r="${j===5?4.5:2.8}" fill="${j===5?COL[st1(v)]:'#35e0ee'}"/><text x="${X(j)}" y="${h-6}" text-anchor="middle" fill="#8996b6" font-size="8.5">${DATES[j]}</text>`});
+ s.ser.forEach((v,j)=>{const dd=new Date(Date.now()+(S.day-(5-j)*12)*864e5);o+=`<circle cx="${X(j)}" cy="${Y(v)}" r="${j===5?4.5:2.8}" fill="${j===5?COL[st1(v)]:'#35e0ee'}"/><text x="${X(j)}" y="${h-6}" text-anchor="middle" fill="#8996b6" font-size="8.5">${dd.getUTCDate()} ${MON[dd.getUTCMonth()]}</text>`});
  return o+'</svg>';
 }
 function renderDetail(){
@@ -647,15 +663,22 @@ function loadSpaceport(id,instant){
  S.sp=SP.find(s=>s.id===id);S.net=genNet(S.sp);S.origin=demoOrigin();S.wp=null;S.roadWx=null;{const f=PICKS.find(p=>p[0]==={ksc:'Houston, USA',biak:'Jakarta, Indonesia'}[id]);S.far=f?mkFar(f[1],f[2],f[0]):null}
  S.pinned=false;recomputeUI(instant);upgradeOSMNet(S.sp);
 }
-function recomputeUI(instant,keepView){
- buildRoutes();
- S.sel=weakestIdx();
- if($('#spsel'))$('#spsel').value=S.sp.id;
- syncPickup();
- renderStats();
- if(!keepView){const t=fitBounds();if(instant){S.view=t;req()}else flyTo(t,1000)}else req();
- if(S.far)upgradeLegsOSRM();else{S.routeSrc=S.net&&S.net.real?'osm':'sim';routeSrcTag()}
- queueAI();
+async function recomputeUI(instant,keepView){
+ const tok=++anaTok;
+ if(S.far)loadOn(S.far.name);
+ try{
+  await buildRoutes(tok);
+  if(anaTok!==tok)return;
+  S.sel=weakestIdx();
+  if($('#spsel'))$('#spsel').value=S.sp.id;
+  syncPickup();
+  renderStats();
+  if(!keepView){const t=fitBounds();if(instant){S.view=t;req()}else flyTo(t,1000)}else req();
+  if(S.far)upgradeLegsOSRM();else{S.routeSrc=S.net&&S.net.real?'osm':'sim';routeSrcTag()}
+  queueAI();
+  ldPct(97,'Rendering routes');await tick();
+ }catch(e){console.error('route analysis failed',e);try{renderStats()}catch(_){};toast('Route analysis failed. Try another pickup point.')}
+ finally{if(anaTok===tok)loadOff()}
 }
 function pickSpaceport(id,instant){
  if(S.sp&&S.sp.id===id&&!instant){flyTo(fitBounds(),700);return}
@@ -721,11 +744,11 @@ function renderHist(){
  $$('#hlist [data-x]').forEach(b=>b.addEventListener('click',()=>{const a=hget().filter(h=>h.id!==+b.dataset.x);hset(a);renderHist();
   if(window.SUREDB&&SUREDB.enabled())SUREDB.push(a,'chore(db): delete analysis',{replace:true}).catch(e=>toast('Shared delete failed ('+e.message+').'))}));
 }
-function openHist(id){
+async function openHist(id){
  const h=hget().find(x=>x.id===id);if(!h)return;
  if(!SP.find(s=>s.id===h.sp)){toast('That saved analysis used a spaceport that is no longer in this mockup.');return}
  S.mode=h.mode;chips();loadSpaceport(h.sp,true);S.far=h.far||null;S.origin=h.o;S.wp=h.wp;S.cargo=h.cargo;$('#cargo').value=h.cargo;$('#dockTruck').innerHTML=`<use href="#${TS()}"/>`;S.day=h.idx;
- recomputeUI(true);S.tmUser=h.tm||null;renderDay();if(h.ri!=null&&S.routes[h.ri]&&h.ri!==S.ri)setRoute(h.ri,true);$('#modal').classList.remove('on');toast('Saved analysis restored.');
+ await recomputeUI(true);S.tmUser=h.tm||null;renderDay();if(h.ri!=null&&S.routes[h.ri]&&h.ri!==S.ri)setRoute(h.ri,true);$('#modal').classList.remove('on');toast('Saved analysis restored.');
 }
 /* ---------- route panels ---------- */
 function cnt3(r){const c={g:0,y:0,r:0};r.segs.forEach(s=>c[s.k4]++);return c}
@@ -792,7 +815,7 @@ function pickFromText(){
 }
 let coachOn=true,coachT=null;
 function coachShow(){
- const c=$('#coach');if(!coachOn||!S.net||!c)return;
+ const c=$('#coach');if(!coachOn||!S.net||!c)return;if(!S.mv){coachT=setTimeout(coachShow,600);return}
  const sr=stage.getBoundingClientRect(),dr=$('#dockTruck').getBoundingClientRect();if(!dr.width)return;
  const sx=dr.left-sr.left+dr.width/2,sy=dr.top-sr.top+dr.height/2;let tx,ty;
  if(S.far){const tg=[S.w*.36,S.h*.62],cp=P(S.far.lon,S.far.lat),cs=PICKS.map(p=>P(relPad(p[1]),p[2])).filter(q=>q[0]>70&&q[0]<S.w-150&&q[1]>170&&q[1]<S.h-80&&Math.hypot(q[0]-cp[0],q[1]-cp[1])>90).sort((a,b)=>Math.hypot(a[0]-tg[0],a[1]-tg[1])-Math.hypot(b[0]-tg[0],b[1]-tg[1]));[tx,ty]=cs[0]||tg}
@@ -808,6 +831,7 @@ function chips(){const L=MODEM()?[['This month',0],['+6 months',6],['+1 year',12
 /* ---------- mount: wire DOM provided by the React shell ---------- */
 export function mount(){
  stage=$('#stage');cv=$('#base');ov=$('#ov');
+setDayLabels(...todayLabels());setDatePill();setInterval(setDatePill,6e4);
 stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect();zoomAt(S.view.z-e.deltaY*.0018,e.clientX-r.left,e.clientY-r.top)},{passive:false});
 $('#dragTruck').addEventListener('pointerdown',e=>startDrag('truck',e,false));
 $('#save').addEventListener('click',saveAnalysis);

@@ -5,7 +5,6 @@ const SP=[
 const CARGO=['First-stage booster','Second stage','Payload fairing','Satellite or payload','Rocket engines','Propellant (liquid oxygen, fuel)','Solid rocket motor','Ground support equipment'];
 let DAYS=['Sat 14 Nov','Sun 15 Nov','Mon 16 Nov','Tue 17 Nov','Wed 18 Nov','Thu 19 Nov','Fri 20 Nov','Sat 21 Nov'];
 let DSH=['Sat 14','Sun 15','Mon 16','Tue 17','Wed 18','Thu 19','Fri 20','Sat 21'];
-const DATES=['3 Sep','15 Sep','27 Sep','9 Oct','21 Oct','2 Nov'];
 const OPS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
 const OPQ='[out:json][timeout:20];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified|residential)$"](%B);out geom;';
 const PICKS=[['Houston, USA',-95.37,29.76],['Los Angeles, USA',-118.24,34.05],['Montreal, Canada',-73.57,45.5],['Mexico City, Mexico',-99.13,19.43],['Sao Paulo, Brazil',-46.63,-23.55],['Rotterdam, Netherlands',4.48,51.92],['Toulouse, France',1.44,43.6],['Johannesburg, South Africa',28.05,-26.2],['Dubai, UAE',55.27,25.2],['Bengaluru, India',77.59,12.97],['Shenzhen, China',114.06,22.54],['Tokyo, Japan',139.69,35.69],['Jakarta, Indonesia',106.85,-6.21],['Makassar, Indonesia',119.41,-5.15],['Sydney, Australia',151.21,-33.87]];
@@ -54,4 +53,4 @@ const PARTS={base:'a longer trip at normal speed',sat:'slower yellow and red seg
 const DIRS=['E','NE','N','NW','W','SW','S','SE'];
 const PEAK={ksc:7,vsfb:0,sb:8,kou:4,biak:0,bkn:4};
 export function setDayLabels(d, s) { DAYS = d; DSH = s; }
-export {SP,CARGO,DAYS,DSH,DATES,OPS,OPQ,PICKS,AIRPORTS,PORTS,ALLT,TERM,DOC,VREF,MODEL,MORD,MODEV,SEAVIA,SEACCESS,TILESETS,HK,PARTS,DIRS,PEAK};
+export {SP,CARGO,DAYS,DSH,OPS,OPQ,PICKS,AIRPORTS,PORTS,ALLT,TERM,DOC,VREF,MODEL,MORD,MODEV,SEAVIA,SEACCESS,TILESETS,HK,PARTS,DIRS,PEAK};

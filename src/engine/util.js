@@ -21,5 +21,5 @@ const hav=(a,b)=>6371*Math.acos(Math.max(-1,Math.min(1,vdot(toV(a[0],a[1]),toV(b
 const unw=(lon,ref)=>lon+360*Math.round((ref-lon)/360);
 const hv=(a,b)=>{const R=6371,r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[0]-a[0])*r,x=Math.sin(dl/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
 const MONn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function monthLabel(m){const mo=(10+m)%12,yr=2026+Math.floor((10+m)/12);return{l:MONn[mo]+' '+yr,s:MONn[mo],yr,mo}}
+function monthLabel(m){const n=new Date(),q=n.getUTCFullYear()*12+n.getUTCMonth()+m,mo=q%12,yr=Math.floor(q/12);return{l:MONn[mo]+' '+yr,s:MONn[mo],yr,mo}}
 export {$,$$,COL,LBL,RANK,f1,fe,fmtT,rng,H,VN,W,rl,st1,st2,st8,stv1,worst,risk,hv,RAD,toV,fromV,vcross,vdot,hav,unw,wrapL,mer,merYinv,MONn,monthLabel};
