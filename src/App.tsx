@@ -77,6 +77,11 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              <div className="card">
+                <div className="eyebrow">AI assessment</div>
+                <div id="aibox" />
+              </div>
             </div>
 
             <div className="card mapcard">

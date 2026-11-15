@@ -22,13 +22,14 @@ function aiRender(a){const box=$('#aibox');if(!box)return;
  const chat=`<div class="ach">${(S.chat||[]).slice(-6).map(m=>`<div class="cm ${m.r}">${esc(m.t)}</div>`).join('')}${chatBusy?'<div class="cm a">…</div>':''}<div class="cr"><input id="acin" placeholder="Ask about this route…" maxlength="200" aria-label="Ask the AI about this route"><button id="acgo" class="btn">Ask</button></div></div>`;
  box.innerHTML=`<div class="airow ${a.risk}"><span class="aib">${({green:'LOW',yellow:'MODERATE',red:'HIGH'})[a.risk]||'—'}</span>${deg}<p>${esc(a.summary)}</p>${a.depart&&a.depart.day?`<div class="win">⌂ Best window <b>${esc(a.depart.day)}</b>${a.depart.note?` — ${esc(a.depart.note)}`:''}</div>`:''}${a.stormBrief?`<div class="sb">⛈ ${esc(a.stormBrief)}</div>`:''}${(a.tips||[]).map(t=>`<div class="tip">· ${esc(t)}</div>`).join('')}${brief}${chat}<div class="hint" style="margin-top:4px">${esc(a.model||'model')} · live gateway assessment</div></div>`;
  const go=$('#acgo'),inp=$('#acin');if(go&&inp){go.onclick=()=>{const q=(inp.value||'').trim();if(q){inp.value='';aiChatAsk(q)}};inp.onkeydown=e=>{if(e.key==='Enter')go.click()}}}
-function aiSig(){return JSON.stringify([S.sp&&S.sp.id,S.origin,S.far&&S.far.name,S.day,S.cargo,S.routes.length,S.ri,S.len&&S.len.toFixed(0),S.storm&&S.storm.t,S.rain&&S.rain[0]])}
+function aiSig(){return JSON.stringify([S.sp&&S.sp.id,S.origin,S.far&&S.far.name,S.day,S.mode,S.tmCur,S.cargo,S.routes.length,S.ri,S.len&&S.len.toFixed(0),S.storm&&S.storm.t,S.rain&&S.rain[0]])}
 function aiCtxText(){const st=aiDeps.stats(),c=aiDeps.cur(),r=S.routes[S.ri],x=aiDeps.ctx?aiDeps.ctx():null;
  const bad=S.segs.filter(s=>s.k4!=='g').map(s=>({i:s.i,km:+(s.km1-s.km0).toFixed(2),k4:s.k4,k1:+s.k1.toFixed(1)}));
  const fc=(S.rain||[]).slice(0,8).map((mm,i)=>[((S.rainDates&&S.rainDates[i])||DAYS[i]||('+'+i+'d')),+Math.max(...mm).toFixed(1)]);
  const se=S.storm&&(S.eonet||[]).find(e=>e.t===S.storm.t);
  const storm=S.storm?{name:S.storm.t,category:S.storm.cat,distanceKm:S.storm.km,recentTrackLonLat:se?se.trk:[]}:null;
- return `Spaceport: ${S.sp.name}. Pickup: ${S.far?S.far.name:'local road pickup'}. Cargo: ${S.cargo}. Day: ${c.l}, forecast rain ${c.v} mm.
+ return `View mode: ${S.mode==='m'?'monthly outlook — 5-year seasonal campaign planning':'daily forecast — 8-day operations'}.
+Spaceport: ${S.sp.name}. Pickup: ${S.far?S.far.name:'local road pickup'}. Cargo: ${S.cargo}. Day: ${c.l}, forecast rain ${c.v} mm.
 Route: ${r.label}, ${f1(S.len)} km, readiness ${Math.round(st.score)}/100, weakest segment #${st.weak.i+1} (${st.weak.k4}, k1=${st.weak.k1.toFixed(1)}).
 Roads: ${S.net&&S.net.real?'real OpenStreetMap graph routed by Dijkstra with hazard weights':'simulated road network'}.
 Problem segments (k1=radar change index, k4=g/y/r): ${JSON.stringify(bad.slice(0,12))}. Empty means all green.
@@ -54,7 +55,7 @@ async function aiAssess(){
   const ctx=aiCtxText();
   const core=`You are a NASA logistics risk analyst for spaceport ground supply routes. Respond in STRICT JSON only (no markdown): {"risk":"green|yellow|red","summary":"2-3 sentences, concrete","depart":{"day":"<one of the forecast day labels>","note":"reason, <=12 words"},"stormBrief":"<one sentence on the storm's bearing on this corridor, '' if none>","tips":["action","action","action"],"weakest":<segment index>}.
 ${ctx}
-For "depart" pick the best departure day weighing rain and the storm.`;
+For "depart" pick the best ${S.mode==='m'?'campaign month':'departure day'} weighing rain and the storm.`;
   const brief=`You are a NASA logistics risk analyst for spaceport ground supply routes. Respond in STRICT JSON only (no markdown): {"reason":"why the recommended option wins vs the others, <=20 words","mitigate":"concrete fix for the worst problem segment — alternate leg, staging, or delay; '' if all green","cargo":"one-line handling brief for this cargo class","eta":"confidence band like '4d 8h ±9h — delay driver: port handoff'","seasonal":"best campaign window in the monthly data, <=15 words","pitch":"2-sentence exec summary naming the live data sources (Open-Meteo forecast, OSM/OSRM roads, NASA GIBS IMERG radar, EONET storms, POWER climatology)"}.
 ${ctx}`;
   const [c1,b1]=await Promise.all([aiJSON(core,.3),aiJSON(brief,.5).catch(()=>({}))]);

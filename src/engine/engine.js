@@ -801,7 +801,7 @@ function bigPart(a,b){const d={base:a.base-b.base,sat:a.sat-b.sat,rain:a.rain-b.
 function renderRoutes(){
  if(!$('#routes'))return;
  checkStorm();
- if(!S.routes.length){if(S.far&&S.mi){$('#routes').innerHTML=`<div class="eyebrow">Route options</div>${modeBar()}<div class="hint" style="margin-top:6px">No route is drawn because no transport mode is possible and safe for this pickup.</div>`;$('#detail').innerHTML='<div class="empty">No route to show.</div>';$('#mapEyebrow').textContent='NO RECOMMENDED ROUTE · '+S.far.name}return}
+ if(!S.routes.length){const ab=$('#aibox');if(ab)ab.innerHTML='';if(S.far&&S.mi){$('#routes').innerHTML=`<div class="eyebrow">Route options</div>${modeBar()}<div class="hint" style="margin-top:6px">No route is drawn because no transport mode is possible and safe for this pickup.</div>`;$('#detail').innerHTML='<div class="empty">No route to show.</div>';$('#mapEyebrow').textContent='NO RECOMMENDED ROUTE · '+S.far.name}return}
  const c=cur(),v=c.v,lv=rl(v),rows=S.routes.map((r,i)=>({r,i,sc:scoreRoute(r,v),cn:cnt3(r)})),ord=[...rows].sort((a,b)=>a.sc.eff-b.sc.eff),rec=rows[S.rec],act=rows[S.ri],two=act.i!==rec.i,fast=[...rows].sort((a,b)=>a.sc.t-b.sc.t)[0],f=(a,k)=>fe(a.sc[k]);
  const nl=!!(S.far&&act.r.mode&&act.r.mode!=='land'),PN=k=>nl&&k==='sat'?'rougher weather along the route':PARTS[k];
  let reason='';
@@ -818,7 +818,6 @@ function renderRoutes(){
  ${S.storm?(S.storm.near?`<div class="tmwarn" style="border-color:rgba(255,178,84,.55);background:rgba(255,178,84,.1);color:#ffe0b5">⛈ <b>NASA EONET:</b> ${S.storm.t} — ~${fe(S.storm.km)} km from this corridor.</div>`:`<div class="hint" style="margin:6px 0 2px">⛈ NASA EONET · ${S.eonet.length} events tracked — nearest: ${S.storm.t}, ${fe(S.storm.km)} km away.</div>`):''}
  <div class="mini"><div><small>Base min</small><b>${f(act,'base')}</b></div><div><small>${nl?'Weather':'Radar'} +min</small><b>${f(act,'sat')}</b></div><div><small>Rain +min</small><b>${f(act,'rain')}</b></div><div><small>Red segs</small><b>${act.sc.red}</b></div><div class="tot"><small>Score min</small><b>${f(act,'eff')}</b></div></div>
  <div class="tline">${tl}</div>
- <div id="aibox" style="margin-top:8px"></div>
  ${nl?legBox(act.r,v):''}
  <details class="calc"><summary>How this is scored</summary><div class="cg">${ci('Score','Travel time in minutes. The fastest route wins.')}${ci('Slowdown','Yellow runs at 71% speed, red at 47%, wet road up to 17% slower in heavy rain.')}${S.far?ci('Mode','Sea, then land, then air. A mode with a red segment is skipped.'):''}</div></details>`;
  routeSrcTag();queueAI();
