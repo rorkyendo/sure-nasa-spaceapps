@@ -40,12 +40,13 @@ const SEACCESS={
  'Sydney':[[151.24,-33.98],[151.29,-33.99]],
  'Port of Biak':[[136.07,-1.19],[136.05,-1.22]],
  'Montreal':[[-73.4,45.55],[-73.1,45.75],[-72.7,46.2],[-72.2,46.6],[-71.75,46.8],[-71.2,46.9],[-70.7,47.1],[-70.3,47.6],[-69.9,48.1],[-69.3,48.4],[-68.6,48.8],[-67.7,49.1],[-66.5,49.5],[-65.0,49.9],[-63.5,50.1],[-61.5,50.15],[-59.5,49.9]]};
+/* NASA GIBS VIIRS daily true-colour imagery (keyless, epsg3857, native max z9 — upscaled beyond). */
+const GD=new Date(Date.now()-2*864e5).toISOString().slice(0,10);
+const GIBS='https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+GD+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
 const TILESETS={
- sat:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+ sat:[{u:GIBS,mz:9}],
  osm:['https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],
- hyb:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}']
+ hyb:[{u:GIBS,mz:9},'https://basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png']
 };
 const HK='sure_history_v1';
 const PARTS={base:'a longer trip at normal speed',sat:'slower yellow and red segments',rain:'slower wet-prone road in the rain',red:'extra red segments'};

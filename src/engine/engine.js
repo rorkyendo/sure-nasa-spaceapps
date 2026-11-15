@@ -438,10 +438,12 @@ function drawBase(){
  const wx=S.mv[0]*ws(),wy=S.mv[1]*ws();
  const ix0=Math.floor((wx-S.cx)/ts),ix1=Math.floor((wx+S.cx)/ts),iy0=Math.max(0,Math.floor((wy-S.cy)/ts)),iy1=Math.min(nt-1,Math.floor((wy+S.cy)/ts));
  let drew=0;
- for(const turl of TILESETS[S.base]||TILESETS.sat){
+ for(const t of TILESETS[S.base]||TILESETS.sat){
+  const turl=t.u||t,iz=Math.min(tz,t.mz==null?19:t.mz),nt2=1<<iz,ts2=256*Math.pow(2,z-iz);
+  const ix0=Math.floor((wx-S.cx)/ts2),ix1=Math.floor((wx+S.cx)/ts2),iy0=Math.max(0,Math.floor((wy-S.cy)/ts2)),iy1=Math.min(nt2-1,Math.floor((wy+S.cy)/ts2));
   let d2=0;
-  for(let iy=iy0;iy<=iy1;iy++)for(let ix=ix0;ix<=ix1;ix++){const tx=((ix%nt)+nt)%nt,px=S.cx+ix*ts-wx,py=S.cy+iy*ts-wy;
-   const im=tileAt(turl,tz,tx,iy);if(im){ctx.drawImage(im,px,py,ts+.6,ts+.6);d2++}}
+  for(let iy=iy0;iy<=iy1;iy++)for(let ix=ix0;ix<=ix1;ix++){const tx=((ix%nt2)+nt2)%nt2,px=S.cx+ix*ts2-wx,py=S.cy+iy*ts2-wy;
+   const im=tileAt(turl,iz,tx,iy);if(im){ctx.drawImage(im,px,py,ts2+.6,ts2+.6);d2++}}
   drew=Math.max(drew,d2)}
  if(!drew){ctx.fillStyle='#0d1b30';ctx.strokeStyle='rgba(88,224,240,.45)';ctx.lineWidth=1;ctx.beginPath();
   for(const r of L50){let f=1;for(let j=0;j<r.lon.length;j++){const p=P(r.lon[j],r.lat[j]);f?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]);f=0}ctx.closePath()}
