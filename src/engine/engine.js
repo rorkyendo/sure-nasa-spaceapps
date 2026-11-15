@@ -510,7 +510,8 @@ async function fetchEonet(){
    const gs=e.geometry||[];if(!gs.length)return null;
    const c=gs[gs.length-1].coordinates,p=typeof c[0]==='number'?c:c[0];
    const cat=(e.categories&&e.categories[0]&&e.categories[0].title)||'';
-   return{t:String(e.title||'Event').replace(/[<>&]/g,''),cat,lon:p[0],lat:p[1]};
+   const trk=gs.slice(-4).map(g=>{const q=g.coordinates,r=typeof q[0]==='number'?q:q[0];return[+r[0].toFixed(2),+r[1].toFixed(2)]});
+   return{t:String(e.title||'Event').replace(/[<>&]/g,''),cat,lon:p[0],lat:p[1],trk};
   }).filter(Boolean).filter(e=>/Severe Storms|Floods/i.test(e.cat));
   checkStorm();if(S.routes&&S.routes.length)renderRoutes();req();
  }catch(e){}}
