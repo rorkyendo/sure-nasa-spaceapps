@@ -130,9 +130,9 @@ window.SUREDB = (() => {
     if ($id('aisave')) $id('aisave').addEventListener('click', () => {
       const v = (ak.value || '').trim();
       if (!v) { const e = $id('aistat'); if (e) e.textContent = 'Paste an API key first.'; return; }
-      aiSet(v); ak.value = ''; aiStat();
+      aiSet(v); try { localStorage.removeItem('sure_ai_off_v1'); } catch (e) {} ak.value = ''; aiStat();
     });
-    if ($id('aioff')) $id('aioff').addEventListener('click', () => { aiSet(''); aiStat(); });
+    if ($id('aioff')) $id('aioff').addEventListener('click', () => { aiSet(''); try { localStorage.setItem('sure_ai_off_v1', '1'); } catch (e) {} aiStat(); });
     paintBtn();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();

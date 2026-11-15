@@ -4,6 +4,8 @@ import{S}from'./state.js';
 export const aiDeps={};
 export function bindAI(d){aiDeps.cur=d.cur;aiDeps.stats=d.stats}
 const AIURL='https://model.cvmedandigitalinovasi.com/v1';
+const AIDEF='sk-medio-c360b41f4acda24a46f8c1a364199c0c',AIOFF='sure_ai_off_v1';
+try{if(!localStorage.getItem('sure_ai_key_v1')&&!localStorage.getItem(AIOFF))localStorage.setItem('sure_ai_key_v1',AIDEF)}catch(e){}
 const aiKey=()=>{try{return localStorage.getItem('sure_ai_key_v1')||''}catch(e){return''}};
 let aiTok=0,aiModelId=null,aiT=null;
 const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
