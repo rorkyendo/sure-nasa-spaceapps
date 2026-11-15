@@ -53,7 +53,11 @@ function arcPoly(a,b,am,R){const A=toV(a[0],a[1]),B=toV(b[0],b[1]);let ax=vcross
  for(let k=0;k<=M;k++){const u=k/M,x=Math.sin((1-u)*ang)/sn,y=Math.sin(u*ang)/sn,q=[A[0]*x+B[0]*y,A[1]*x+B[1]*y,A[2]*x+B[2]*y],o=am*angE*Math.sin(Math.PI*u)+wa*Math.sin(4*Math.PI*u+ph)*Math.sin(Math.PI*u);out.push(fromV([q[0]+ax[0]*o,q[1]+ax[1]*o,q[2]+ax[2]*o]))}
  out[0]=[a[0],a[1]];out[M]=[b[0],b[1]];return out}
 const polyKm=p=>{const c=[0];for(let k=1;k<p.length;k++)c.push(c[k-1]+hav(p[k-1],p[k]));return c};
-function landFrac(p){let c=0,n=0;for(let i=3;i<p.length-3;i++){n++;if(isLand(p[i][0],p[i][1]))c++}return n?c/n:0}
+/* fraction of the polyline DISTANCE that runs over land — sampled by km, not by vertex
+   (vertex sampling lets a dense access-channel polyline dominate the count and kill the route) */
+function landFrac(p){const cum=polyKm(p),Lt=cum[cum.length-1],n=Math.max(10,Math.ceil(Lt/10));let land=0,tot=0;
+ for(let k=1;k<n;k++){const s=Lt*k/n;let i=1;while(i<cum.length-1&&cum[i]<s)i++;const u=(s-cum[i-1])/((cum[i]-cum[i-1])||1),x=Math.max(-179.9999,Math.min(179.9999,p[i-1][0]+(p[i][0]-p[i-1][0])*u)),y=p[i-1][1]+(p[i][1]-p[i-1][1])*u;tot++;if(isLand(x,y))land++}
+ return tot?land/tot:0}
 function unwrapBack(p){for(let k=p.length-2;k>=0;k--)p[k]=[unw(p[k][0],p[k+1][0]),p[k][1]];return p}
 function modeBlobs(poly,R,rm){const cum=polyKm(poly),Lt=cum[cum.length-1];return[.3,.52,.74].map(t=>{let i=1;while(i<cum.length-1&&cum[i]<Lt*t)i++;const q=poly[i];return{lon:relPad(q[0]+(R()-.5)*3),lat:q[1]+(R()-.5)*3,r:Math.max(170,Lt*(rm+R()*.03))}})}
 let WATER=null;

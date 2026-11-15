@@ -26,7 +26,8 @@ const MODEV={land:'Heavy-haul transporter (multi-axle trailer)',sea:'Cargo barge
 const SEAVIA={'Michoud|Port Canaveral':[[-89.0,28.6],[-86.5,25.4],[-83.2,24.0],[-80.0,25.3],[-79.6,27.2]],'Houston|Port Canaveral':[[-92.5,27.6],[-86.5,25.4],[-83.2,24.0],[-80.0,25.3],[-79.6,27.2]],'Tanjung Priok|Port of Biak':[[112,-6.3],[116.5,-7.6],[121,-7.2],[127,-6.6],[125.8,-2.6],[127,0],[131.5,1.5],[134.5,.5]],'Rotterdam|Port Canaveral':[[-6,49.3]],'Bordeaux|Port Canaveral':[[-9.6,43.3]]};
 /* harbor/river approach polylines (port -> open water) for terminals that sit inland in the coastline mask */
 const SEACCESS={
- 'Houston':[[-95.08,29.74],[-94.98,29.7],[-94.9,29.66],[-94.78,29.62],[-94.65,29.55],[-94.5,29.42],[-94.35,29.3]],
+ /* Houston: real Buffalo Bayou→Houston Ship Channel centreline (OSM rel 2472419) + Galveston Bay fairway + Bolivar Roads */
+ 'Houston':[[-95.2695,29.7249],[-95.2658,29.7251],[-95.2572,29.7272],[-95.2534,29.7257],[-95.2482,29.7209],[-95.2429,29.719],[-95.24,29.7195],[-95.2334,29.7238],[-95.2283,29.7253],[-95.2234,29.7256],[-95.217,29.7244],[-95.211,29.7268],[-95.2049,29.7367],[-95.203,29.7391],[-95.1895,29.7448],[-95.1805,29.7458],[-95.1707,29.7471],[-95.1641,29.7442],[-95.1579,29.7406],[-95.1553,29.7383],[-95.1522,29.7366],[-95.1497,29.7362],[-95.1399,29.7355],[-95.126,29.7339],[-95.1171,29.7384],[-95.1099,29.7406],[-95.1058,29.7421],[-95.0927,29.7557],[-95.0887,29.7621],[-95.0873,29.7628],[-95.0822,29.7642],[-95.0793,29.7635],[-95.04,29.75],[-95.01,29.73],[-94.99,29.7],[-94.97,29.685],[-94.94,29.665],[-94.91,29.63],[-94.88,29.59],[-94.85,29.55],[-94.81,29.5],[-94.77,29.45],[-94.72,29.36],[-94.68,29.33],[-94.64,29.3]],
  'Michoud':[[-89.8,30.02],[-89.6,30.1],[-89.35,30.15],[-89.1,30.2],[-88.9,30.22],[-88.55,30.25]],
  'Veracruz':[[-96.08,19.18],[-96.0,19.17]],
  'Rotterdam':[[4.0,51.97],[3.9,51.98],[3.75,52.0],[3.6,52.02]],
@@ -40,14 +41,13 @@ const SEACCESS={
  'Sydney':[[151.24,-33.98],[151.29,-33.99]],
  'Port of Biak':[[136.07,-1.19],[136.05,-1.22]],
  'Montreal':[[-73.4,45.55],[-73.1,45.75],[-72.7,46.2],[-72.2,46.6],[-71.75,46.8],[-71.2,46.9],[-70.7,47.1],[-70.3,47.6],[-69.9,48.1],[-69.3,48.4],[-68.6,48.8],[-67.7,49.1],[-66.5,49.5],[-65.0,49.9],[-63.5,50.1],[-61.5,50.15],[-59.5,49.9]]};
-/* NASA GIBS VIIRS daily true-colour imagery (keyless, epsg3857, native max z9 — upscaled beyond). */
-const GD=new Date(Date.now()-2*864e5).toISOString().slice(0,10);
-const GIBS='https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/'+GD+'/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+/* Basemap tiles — all keyless. Google layers via the keyless mt*.google.com vt endpoint
+   (lyrs: s=satellite, y=satellite+labels hybrid, m=roadmap). */
 const TILESETS={
- sat:[{u:GIBS,mz:9}],
+ sat:['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
  osm:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
  gmap:['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'],
- hyb:[{u:GIBS,mz:9},'https://basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png']
+ hyb:['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}']
 };
 const HK='sure_history_v1';
 const PARTS={base:'a longer trip at normal speed',sat:'slower yellow and red segments',rain:'slower wet-prone road in the rain',red:'extra red segments'};
